@@ -179,7 +179,8 @@ class GroovyRestrictedTokenizer(RegexLexer):
             (r'([0-9][0-9]*\.[0-9]+([eE][0-9]+)?[fd]?)([^\S\n]*)(/)', bygroups(Number.Float, Whitespace, Operator)),
             (r'(0x[0-9a-fA-F]+)([^\S\n]*)(/)', bygroups(Number.Hex, Whitespace, Operator)),
             (r'([0-9]+L?)([^\S\n]*)(/)', bygroups(Number.Integer, Whitespace, Operator)),
-            (r'([~^*!%&\[\](){}<>|+=:;,.?-])([^\S\n]*)(/)', bygroups(Operator, Whitespace, String.GString.GStringBegin), 'slashy_gstring'),
+            #(r'([\]})])([^\S\n]*)(/)', bygroups(Operator, Whitespace, String.GString.GStringBegin), ('#pop', '#pop', 'slashy_gstring')),
+            #(r'([~^*!%&<>|+=:;,.?-])([^\S\n]*)(/)', bygroups(Operator, Whitespace, String.GString.GStringBegin), 'slashy_gstring'),
             #(r'""".*?"""', String.Double),
             (r"'''.*?'''", String.Single),
             #(r'"(\\\\|\\[^\\]|[^"\\])*"', String.Double),
@@ -192,12 +193,29 @@ class GroovyRestrictedTokenizer(RegexLexer):
             (r'[a-zA-Z_]\w*:', Name.Label),
             (r'([a-zA-Z_$]\w*)([^\S\n]*)(/)', bygroups(Name, Whitespace, Operator)),
             (r'[a-zA-Z_$]\w*', Name),
-            #(r'/', String.GString.GStringBegin, 'slashy_gstring'),
-            (r'[~^*!%&\[\](){}<>|+=:;,./?-]', Operator),
+            (r'/', String.GString.GStringBegin, 'slashy_gstring'),
+            (r'\{', Operator, 'braces'),
+            (r'\(', Operator, 'parens'),
+            (r'\[', Operator, 'brackets'),
+            (r'[~^*!%&<>|+=:;,./?-]', Operator),
             (r'[0-9][0-9]*\.[0-9]+([eE][0-9]+)?[fd]?', Number.Float),
             (r'0x[0-9a-fA-F]+', Number.Hex),
             (r'[0-9]+L?', Number.Integer),
-            (r'\n', Whitespace)
+            (r'[\]})]', Operator, ('#pop', '#pop')),
+            (r'\n', Whitespace),
+#            default("#pop"),
+        ],
+        "braces": [
+            (r"\}", Operator, '#pop'),
+            default("base"),
+        ],
+        "parens": [
+            (r"\)", Operator, '#pop'),
+            default("base"),
+        ],
+        "brackets": [
+            (r"\]", Operator, '#pop'),
+            default("base"),
         ],
         'class': [
             (r'[a-zA-Z_]\w*', Name.Class, '#pop')
@@ -207,40 +225,42 @@ class GroovyRestrictedTokenizer(RegexLexer):
         ],
         'gstring_closure': [
             (r'\}', String.GString.ClosureEnd, '#pop'),
-            include('base'),
+            default('base'),
         ],
         'gstring_common': [
-            (r'\$[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z][a-zA-Z0-9_]*)*', String.GString.GStringPath),
+            (r'\$[a-zA-Z][a-zA-Z0-9_]*(?:\.[a-zA-Z][a-zA-Z0-9_]*)*', String.GString.GStringPath),
             (r'\$\{', String.GString.ClosureBegin, 'gstring_closure'),
         ],
         'gstring_common_escape': [
+            include('gstring_common'),
             (r'\\u[0-9A-Fa-f]+', String.Escape),
             (r'\\.', String.Escape),    # Escapes $ " and others
-            include('gstring_common'),
         ],
         'gstring': [
             (r'"', String.GString.GStringEnd, '#pop'),
+            include('gstring_common_escape'),
             (r'[^$"\\]+', String.Double),
-            include('gstring_common_escape')
         ],
         'triple_gstring': [
             (r'"""', String.GString.GStringEnd, '#pop'),
+            include('gstring_common_escape'),
             (r'[^$"\\]+', String.Double),
             (r'"', String.Double),
             (r'""', String.Double),
-            include('gstring_common_escape')
         ],
         'slashy_gstring': [
             (r'/', String.GString.GStringEnd, '#pop'),
+            include('gstring_common_escape'),
             (r'[^$\\/]+', String.Double),
-            include('gstring_common_escape')
+            # This is needed for regular expressions
+            (r'\$', String.Double),
         ],
         'dolar_slashy_gstring': [
             (r'/\$', String.GString.GStringEnd, '#pop'),
+            include('gstring_common'),
             (r'[^$]+', String.Double),
             (r'\$\$', String.Escape),    # Escapes $ " and others
             (r'\$/', String.Escape),    # Escapes $ " and others
-            include('gstring_common')
         ],
     }
 
