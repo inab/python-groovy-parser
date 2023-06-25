@@ -1,0 +1,43 @@
+fail_fast: true
+
+repos:
+  - repo: local
+    hooks:
+      - id: pylint
+        name: Local PyLint
+        language: system
+        require_serial: true
+        types:
+          - python
+        exclude: "^[^/]*env/|dev-[^/]*/"
+        entry: pylint -j 0
+      - id: mypy
+        name: Local MyPy
+        language: system
+        types:
+          - python
+#        files: \.py$
+        exclude: "^[^/]*env/|dev-[^/]*/"
+        require_serial: true
+#        entry: ./basic-installer.bash mypy --strict
+        entry: mypy --strict --show-error-codes --no-warn-unused-ignores
+# Main problem: python executable path, used to find the environment is hard
+#  - repo: https://github.com/pre-commit/mirrors-mypy.git
+#    rev: v1.2.0
+#    hooks:
+#      - id: mypy
+#        exclude: "^[^/]*env/|dev-[^/]*/"
+#        require_serial: true
+#        args: [--strict, --show-error-codes, --no-warn-unused-ignores, --python-executable, .pyWEenv/bin/python]
+#  - repo: meta
+  - repo: https://github.com/jmfernandez/pre-commit_mirrors-actionlint.git
+    rev: v1.6.24
+    hooks:
+      - id: actionlint
+
+  - repo: https://github.com/ambv/black.git
+    rev: 22.6.0
+    hooks:
+      - id: black
+        exclude: "^[^/]*env/|dev-[^/]*/"
+        args: [--diff, --check]

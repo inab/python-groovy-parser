@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (C) 2023 Barcelona Supercomputinh Center, José M. Fernández
+# Copyright (C) 2023 Barcelona Supercomputing Center, José M. Fernández
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,6 +18,8 @@
 
 # https://github.com/daniellansun/groovy-antlr4-grammar-optimized/tree/master/src/main/antlr4/org/codehaus/groovy/parser/antlr4
 
+import inspect
+import logging
 import sys
 
 from pygments.token import Token
@@ -276,6 +278,11 @@ GMAPPER = {
 
 class PygmentsGroovyLexer(Lexer):
     def __init__(self, lexer_conf):
+        self.logger = logging.getLogger(
+            dict(inspect.getmembers(self))["__module__"]
+            + "::"
+            + self.__class__.__name__
+        )
         pass
 
     def lex(self, data):
@@ -411,8 +418,7 @@ class PygmentsGroovyLexer(Lexer):
                 else:
                     next_column = start_column + len(the_raw_token)
                 if ltok is not None:
-                    print(f"=> Yielding {ltok} {the_token} {token_type}")
-                    sys.stdout.flush()
+                    self.logger.debug(f"=> Yielding {ltok} {the_token} {token_type}")
                     yield LarkToken(
                         ltok,
                         (token_type, the_token, raw_token),
@@ -422,8 +428,7 @@ class PygmentsGroovyLexer(Lexer):
                         column=start_column,
                     )
                 else:
-                    print(f"\tFiltered out {token_type} {the_token}")
-                    sys.stdout.flush()
+                    self.logger.debug(f"\tFiltered out {token_type} {the_token}")
                 
                 start_pos = next_start_pos
                 start_row = next_row

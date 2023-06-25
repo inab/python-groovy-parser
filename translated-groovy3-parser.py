@@ -3,7 +3,7 @@
 
 # SPDX-License-Identifier: Apache-2.0
 # groovy-parser, a proof of concept Groovy parser based on Pygments and Lark
-# Copyright (C) 2023 Barcelona Supercomputinh Center, José M. Fernández
+# Copyright (C) 2023 Barcelona Supercomputing Center, José M. Fernández
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,7 +17,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
+import os
 import sys
+
 from pygments.token import Token
 
 from groovy_parser.parser import (
@@ -29,7 +32,7 @@ from lark.visitors import Discard
 
 
 def handle_errors(err):
-    print(f"JARL {err}",file=sys.stderr)
+    logging.error(f"JARL {err}",file=sys.stderr)
     sys.stderr.flush()
     
     #if err.token.type == 'LABEL':
@@ -118,20 +121,36 @@ def analyze_nf_source(filename):
     #raw_tokens = [t for t in gLex.get_tokens(wfH.read())]
     #tokens = list(filter(lambda t: all(map(lambda tc: not str(t[0]).startswith(str(tc)), FilteredOutTokens)), raw_tokens))        
 
-    #print(tokens)
+    #logging.debug(tokens)
 
     
-    print(tree.pretty())
+    logging.debug(tree.pretty())
     
     res = None
     #res = ParseNextflowTreeToDict().transform(tree)
     #import json
     #json.dump(res, sys.stdout, indent=4, sort_keys=True)
     # 
-    # print('-->')
-    # print(res) # prints {'alice': [1, 27, 3], 'bob': [4], 'carrie': [], 'dan': [8, 6]}
+    # logging.debug('-->')
+    # logging.debug(res) # prints {'alice': [1, 27, 3], 'bob': [4], 'carrie': [], 'dan': [8, 6]}
     return tree, res
 
 
 if __name__ == '__main__':
-    analyze_nf_source(sys.argv[1])
+    logging.basicConfig(
+        level=logging.DEBUG,
+    )
+    log = logging.getLogger()  # root logger
+    for filename in sys.argv[1:]:
+        print(f"* Parsing {filename}")
+        logfile = filename + '.lark'
+        fH = logging.FileHandler(logfile, mode="w", encoding="utf-8")
+        for hdlr in log.handlers[:]:  # remove all old handlers
+            log.removeHandler(hdlr)
+        log.addHandler(fH)      # set the new handler
+        try:
+            analyze_nf_source(filename)
+        except Exception as e:
+            print(f"\tParse failed, see {logfile}")
+            logging.exception("Parse failed")
+        fH.close()

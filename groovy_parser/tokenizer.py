@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (C) 2023 Barcelona Supercomputinh Center, José M. Fernández
+# Copyright (C) 2023 Barcelona Supercomputing Center, José M. Fernández
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -144,8 +144,8 @@ class GroovyRestrictedTokenizer(RegexLexer):
         'base': [
             (r'[^\S\n]+', Whitespace),
             #(r'(//.*?)(\n)', bygroups(Comment.Single, Whitespace)),
-            (r'(//.*?)$', bygroups(Comment.Single)),
-            (r'/\*.*?\*/', Comment.Multiline),
+            (r'//(.*?)$', bygroups(Comment.Single)),
+            (r'/\*(.*?)\*/', bygroups(Comment.Multiline)),
             # keywords: go before method names to avoid lexing "throw new XYZ"
             # as a method signature
             (r'(assert|break|case|catch|continue|default|do|else|finally|for|'
@@ -174,7 +174,12 @@ class GroovyRestrictedTokenizer(RegexLexer):
             (r'"""', String.GString.GStringBegin, 'triple_gstring'),
             (r'"', String.GString.GStringBegin, 'gstring'),
             (r'\$/', String.GString.GStringBegin, 'dolar_slashy_gstring'),
-            (r'/', String.GString.GStringBegin, 'slashy_gstring'),
+            # Disambiguation between division and slashy gstrings
+            (r'/=', Operator),
+            (r'([0-9][0-9]*\.[0-9]+([eE][0-9]+)?[fd]?)([^\S\n]*)(/)', bygroups(Number.Float, Whitespace, Operator)),
+            (r'(0x[0-9a-fA-F]+)([^\S\n]*)(/)', bygroups(Number.Hex, Whitespace, Operator)),
+            (r'([0-9]+L?)([^\S\n]*)(/)', bygroups(Number.Integer, Whitespace, Operator)),
+            (r'([~^*!%&\[\](){}<>|+=:;,.?-])([^\S\n]*)(/)', bygroups(Operator, Whitespace, String.GString.GStringBegin), 'slashy_gstring'),
             #(r'""".*?"""', String.Double),
             (r"'''.*?'''", String.Single),
             #(r'"(\\\\|\\[^\\]|[^"\\])*"', String.Double),
@@ -182,9 +187,12 @@ class GroovyRestrictedTokenizer(RegexLexer):
             #(r'\$/((?!/\$).)*/\$', String),
             #(r'/(\\\\|\\[^\\\n]|[^/\\\n])+/', String),
             (r"'\\.'|'[^\\]'|'\\u[0-9a-fA-F]{4}'", String.Char),
+            (r'(\.)([a-zA-Z_]\w*)([^\S\n]*)(/)', bygroups(Operator, Name.Attribute, Whitespace, Operator)),
             (r'(\.)([a-zA-Z_]\w*)', bygroups(Operator, Name.Attribute)),
             (r'[a-zA-Z_]\w*:', Name.Label),
+            (r'([a-zA-Z_$]\w*)([^\S\n]*)(/)', bygroups(Name, Whitespace, Operator)),
             (r'[a-zA-Z_$]\w*', Name),
+            #(r'/', String.GString.GStringBegin, 'slashy_gstring'),
             (r'[~^*!%&\[\](){}<>|+=:;,./?-]', Operator),
             (r'[0-9][0-9]*\.[0-9]+([eE][0-9]+)?[fd]?', Number.Float),
             (r'0x[0-9a-fA-F]+', Number.Hex),
