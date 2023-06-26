@@ -141,7 +141,7 @@ class GroovyRestrictedTokenizer(RegexLexer):
             (r'#!(.*?)$', Comment.Preproc, 'base'),
             default('base'),
         ],
-        'base': [
+        'base_common': [
             (r'[^\S\n]+', Whitespace),
             #(r'(//.*?)(\n)', bygroups(Comment.Single, Whitespace)),
             (r'//(.*?)$', bygroups(Comment.Single)),
@@ -211,13 +211,23 @@ class GroovyRestrictedTokenizer(RegexLexer):
             (r'[0-9][0-9]*\.[0-9]+([eE][0-9]+)?[fd]?', Number.Float),
             (r'0x[0-9a-fA-F]+', Number.Hex),
             (r'[0-9]+L?', Number.Integer),
+            (r'/', String.GString.GStringBegin, 'slashy_gstring'),
+            (r'\n', Whitespace),
+        ],
+        "base": [
+            include("base_common"),
             (r'([\]})])([^\S\n]*)/\*', bygroups(Operator, Whitespace), ('#pop', '#pop', 'multiline_comment')),
             (r'([\]})])([^\S\n]*)//(.*?)$', bygroups(Operator, Whitespace, Comment.Single), ('#pop', '#pop')),
             (r'([\]})])([^\S\n]*)(/)', bygroups(Operator, Whitespace, Operator), ('#pop', '#pop')),
             (r'[\]})]', Operator, ('#pop', '#pop')),
-            (r'/', String.GString.GStringBegin, 'slashy_gstring'),
-            (r'\n', Whitespace),
-#            default("#pop"),
+        ],
+        "base_gstring_closure": [
+            include("base_common"),
+            (r'([\])])([^\S\n]*)/\*', bygroups(Operator, Whitespace), ('#pop', '#pop', 'multiline_comment')),
+            (r'([\])])([^\S\n]*)//(.*?)$', bygroups(Operator, Whitespace, Comment.Single), ('#pop', '#pop')),
+            (r'([\])])([^\S\n]*)(/)', bygroups(Operator, Whitespace, Operator), ('#pop', '#pop')),
+            (r'[\])]', Operator, ('#pop', '#pop')),
+            default("#pop"),
         ],
         "multiline_comment": [
             (r'(.*?)\*/', bygroups(Comment.Multiline), '#pop'),
@@ -242,7 +252,7 @@ class GroovyRestrictedTokenizer(RegexLexer):
         ],
         'gstring_closure': [
             (r'\}', String.GString.ClosureEnd, '#pop'),
-            default('base'),
+            default('base_gstring_closure'),
         ],
         'gstring_common': [
             (r'\$[a-zA-Z][a-zA-Z0-9_]*(?:\.[a-zA-Z][a-zA-Z0-9_]*)*', String.GString.GStringPath),
