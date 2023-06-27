@@ -99,15 +99,22 @@ class GroovyRestrictedTokenizer(RegexLexer):
             (r'\$/', String.GString.GStringBegin, 'dolar_slashy_gstring'),
             # Disambiguation between division and slashy gstrings
             (r'/=', Operator),
-            (r'([0-9][0-9]*(?:\.[0-9]+)?(?:[eE][0-9]+)?[FfDdGg]?)([^\S\n]*)/\*', bygroups(Number.Float, Whitespace), 'multiline_comment'),
-            (r'([0-9][0-9]*(?:\.[0-9]+)?(?:[eE][0-9]+)?[FfDdGg]?)([^\S\n]*)//(.*?)$', bygroups(Number.Float, Whitespace, Comment.Single)),
-            (r'([0-9][0-9]*(?:\.[0-9]+)?(?:[eE][0-9]+)?[FfDdGg]?)([^\S\n]*)(/)', bygroups(Number.Float, Whitespace, Operator)),
-            (r'(0x[0-9a-fA-F]+)([^\S\n]*)/\*', bygroups(Number.Hex, Whitespace), 'multiline_comment'),
-            (r'(0x[0-9a-fA-F]+)([^\S\n]*)//(.*?)$', bygroups(Number.Hex, Whitespace, Comment.Single)),
-            (r'(0x[0-9a-fA-F]+)([^\S\n]*)(/)', bygroups(Number.Hex, Whitespace, Operator)),
-            (r'([0-9]+[LlGg]?)([^\S\n]*)/\*', bygroups(Number.Integer, Whitespace), 'multiline_comment'),
-            (r'([0-9]+[LlGg]?)([^\S\n]*)//(.*?)$', bygroups(Number.Integer, Whitespace, Comment.Single)),
-            (r'([0-9]+[LlGg]?)([^\S\n]*)(/)', bygroups(Number.Integer, Whitespace, Operator)),
+            # See https://docs.groovy-lang.org/docs/latest/html/documentation/#_numbers
+            (r'([0-9](?:_?[0-9]+)*(?:\.[0-9](?:_?[0-9]+)*)?(?:[+-]?[eE][0-9]+)?[FfDdGg]?)([^\S\n]*)/\*', bygroups(Number.Float, Whitespace), 'multiline_comment'),
+            (r'([0-9](?:_?[0-9]+)*(?:\.[0-9](?:_?[0-9]+)*)?(?:[+-]?[eE][0-9]+)?[FfDdGg]?)([^\S\n]*)//(.*?)$', bygroups(Number.Float, Whitespace, Comment.Single)),
+            (r'([0-9](?:_?[0-9]+)*(?:\.[0-9](?:_?[0-9]+)*)?(?:[+-]?[eE][0-9]+)?[FfDdGg]?)([^\S\n]*)(/)', bygroups(Number.Float, Whitespace, Operator)),
+
+            (r'(0b[01](?:_?[01]+)*[LlGg]?)([^\S\n]*)/\*', bygroups(Number.Binary, Whitespace), 'multiline_comment'),
+            (r'(0b[01](?:_?[01]+)*[LlGg]?)([^\S\n]*)//(.*?)$', bygroups(Number.Binary, Whitespace, Comment.Single)),
+            (r'(0b[01](?:_?[01]+)*[LlGg]?)([^\S\n]*)(/)', bygroups(Number.Hex, Whitespace, Operator)),
+
+            (r'(0x[0-9a-fA-F](?:_?[0-9a-fA-F]+)*[LlGg]?)([^\S\n]*)/\*', bygroups(Number.Hex, Whitespace), 'multiline_comment'),
+            (r'(0x[0-9a-fA-F](?:_?[0-9a-fA-F]+)*[LlGg]?)([^\S\n]*)//(.*?)$', bygroups(Number.Hex, Whitespace, Comment.Single)),
+            (r'(0x[0-9a-fA-F](?:_?[0-9a-fA-F]+)*[LlGg]?)([^\S\n]*)(/)', bygroups(Number.Hex, Whitespace, Operator)),
+
+            (r'(0?[0-9](?:_?[0-9]+)*[LlGg]?)([^\S\n]*)/\*', bygroups(Number.Integer, Whitespace), 'multiline_comment'),
+            (r'(0?[0-9](?:_?[0-9]+)*[LlGg]?)([^\S\n]*)//(.*?)$', bygroups(Number.Integer, Whitespace, Comment.Single)),
+            (r'(0?[0-9](?:_?[0-9]+)*[LlGg]?)([^\S\n]*)(/)', bygroups(Number.Integer, Whitespace, Operator)),
             #(r'([\]})])([^\S\n]*)(/)', bygroups(Operator, Whitespace, String.GString.GStringBegin), ('#pop', '#pop', 'slashy_gstring')),
             #(r'([~^*!%&<>|+=:;,.?-])([^\S\n]*)(/)', bygroups(Operator, Whitespace, String.GString.GStringBegin), 'slashy_gstring'),
             #(r'""".*?"""', String.Double),
@@ -131,13 +138,21 @@ class GroovyRestrictedTokenizer(RegexLexer):
             (r'\[', Operator, 'brackets'),
             #(r'[~^*!%&<>|+=:;,./?-]', Operator),
             (r'[~^*!%&<>|+=:;,.?-]', Operator),
-            (r'[0-9][0-9]*(?:\.[0-9]+)?(?:[eE][0-9]+)?[FfDdGg]?', Number.Float),
-            (r'0x[0-9a-fA-F]+', Number.Hex),
-            (r'[0-9]+[LlGg]?', Number.Integer),
+            (r'[0-9](?:_?[0-9]+)*(?:\.[0-9](?:_?[0-9]+)*)?(?:[+-]?[eE][0-9]+)?[FfDdGg]?', Number.Float),
+            (r'0b[01](?:_?[01]+)*[LlGg]?', Number.Binary),
+            (r'0x[0-9a-fA-F](?:_?[0-9a-fA-F]+)*[LlGg]?', Number.Hex),
+            # Both decimal and octal
+            (r'0?[0-9](?:_?[0-9]+)*[LlGg]?', Number.Integer),
             (r'/', String.GString.GStringBegin, 'slashy_gstring'),
             # Silencing the escaped newline
             (r'(\\$\n)', bygroups(None)),
             (r'\n', Whitespace),
+        ],
+        "after_number": [
+            (r'([^\S\n]*)/\*', bygroups(Whitespace), ('#pop', 'multiline_comment')),
+            (r'([^\S\n]*)//(.*?)$', bygroups(Whitespace, Comment.Single), '#pop'),
+            (r'([^\S\n]*)(/)', bygroups(Whitespace, Operator), '#pop'),
+            default("#pop"),
         ],
         "base": [
             include("base_common"),
