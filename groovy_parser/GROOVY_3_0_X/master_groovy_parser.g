@@ -83,6 +83,7 @@ method_declaration : modifiers_opt type_parameters? ( return_type nls )? method_
 
 method_name : identifier
            | string_literal
+           | static_gstring
 
 return_type : standard_type
            | VOID
@@ -153,6 +154,8 @@ literal : INTEGER_LITERAL
            | string_literal
            | BOOLEAN_LITERAL
            | NULL_LITERAL
+
+static_gstring : GSTRING_BEGIN STRING_LITERAL_PART+ GSTRING_END
 
 gstring : GSTRING_BEGIN (STRING_LITERAL_PART* GSTRING_PART gstring_value )* STRING_LITERAL_PART* GSTRING_END
 
