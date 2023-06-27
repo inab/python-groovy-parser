@@ -72,14 +72,14 @@ class GroovyRestrictedTokenizer(RegexLexer):
              r'if|goto|instanceof|new|return|switch|this|throw|try|while|in|as)\b',
              Keyword),
             # method names
-            (r'^(\s*(?:[a-zA-Z_][\w.\[\]]*\s+)+?)'  # return arguments
-             r'('
-             r'[a-zA-Z_]\w*'                        # method name
-             r'|"(?:\\\\|\\[^\\]|[^"\\])*"'         # or double-quoted method name
-             r"|'(?:\\\\|\\[^\\]|[^'\\])*'"         # or single-quoted method name
-             r')'
-             r'(\s*)(\()',                          # signature start
-             bygroups(using(this), Name.Function, Whitespace, Operator)),
+            #(r'^(\s*(?:[a-zA-Z_][\w.\[\]]*\s+)+?)'  # return arguments
+            # r'('
+            # r'[a-zA-Z_]\w*'                        # method name
+            # r'|"(?:\\\\|\\[^\\]|[^"\\])*"'         # or double-quoted method name
+            # r"|'(?:\\\\|\\[^\\]|[^'\\])*'"         # or single-quoted method name
+            # r')'
+            # r'(\s*)(\()',                          # signature start
+            # bygroups(using(this), Name.Function, Whitespace, Operator)),
             (r'@[a-zA-Z_][\w.]*', Name.Decorator),
             (r'(abstract|const|enum|extends|final|implements|native|private|'
              r'protected|public|static|strictfp|super|synchronized|throws|'
