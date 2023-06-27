@@ -331,13 +331,19 @@ class PygmentsGroovyLexer(Lexer):
                     ('IDENTIFIER', raw_token[0:-1], raw_token[0:-1]),
                     ('COLON', ":", ":")
                 ]
+            elif token_type == Token.Name.Decorator:
+                the_tokens = [
+                    ('AT', "@", "@"),
+                    ('IDENTIFIER', raw_token[1:], raw_token[1:]),
+                ]
             elif token_map is not None:
                 ltok = token_map.get(token)
                 if ltok is None:
                     ltok = token_map.get(None)
                 
-                if ltok == 'IDENTIFIER' and raw_token[0].isupper():
-                    ltok = 'CAPITALIZED_IDENTIFIER'
+                if ltok == 'IDENTIFIER':
+                    if raw_token[0].isupper():
+                        ltok = 'CAPITALIZED_IDENTIFIER'
             elif token_type == Token.Literal.String.Single:
                 if token.startswith("'''"):
                     token = raw_token[3:-3]
