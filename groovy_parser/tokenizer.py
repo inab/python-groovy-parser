@@ -90,6 +90,7 @@ class GroovyRestrictedTokenizer(RegexLexer):
             (r'(true|false|null)\b', Keyword.Constant),
             (r'(class|interface)(\s+)', bygroups(Keyword.Declaration, Whitespace),
              'class'),
+            (r'(import)(\s+)(static)(\s+)', bygroups(Keyword.Namespace, Whitespace, Keyword, Whitespace), 'import'),
             (r'(import)(\s+)', bygroups(Keyword.Namespace, Whitespace), 'import'),
             (r'"""', String.GString.GStringBegin, 'triple_gstring'),
             (r'"', String.GString.GStringBegin, 'gstring'),
