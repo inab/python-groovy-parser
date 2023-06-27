@@ -233,16 +233,22 @@ class GroovyRestrictedTokenizer(RegexLexer):
             (r'(.*?)\*/', bygroups(Comment.Multiline), '#pop'),
         ],
         "braces": [
+            (r'(\})([^\S\n]*)/\*', bygroups(Operator, Whitespace), ('#pop', 'multiline_comment')),
+            (r'(\})([^\S\n]*)//(.*?)$', bygroups(Operator, Whitespace, Comment.Single), '#pop'),
             (r"(\})([^\S\n]*)(/)", bygroups(Operator, Whitespace, Operator), '#pop'),
             (r"\}", Operator, '#pop'),
             default("base"),
         ],
         "parens": [
+            (r'(\))([^\S\n]*)/\*', bygroups(Operator, Whitespace), ('#pop', 'multiline_comment')),
+            (r'(\))([^\S\n]*)//(.*?)$', bygroups(Operator, Whitespace, Comment.Single), '#pop'),
             (r"(\))([^\S\n]*)(/)", bygroups(Operator, Whitespace, Operator), '#pop'),
             (r"\)", Operator, '#pop'),
             default("base"),
         ],
         "brackets": [
+            (r'(\])([^\S\n]*)/\*', bygroups(Operator, Whitespace), ('#pop', 'multiline_comment')),
+            (r'(\])([^\S\n]*)//(.*?)$', bygroups(Operator, Whitespace, Comment.Single), '#pop'),
             (r"(\])([^\S\n]*)(/)", bygroups(Operator, Whitespace, Operator), '#pop'),
             (r"\]", Operator, '#pop'),
             default("base"),
