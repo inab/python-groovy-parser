@@ -133,6 +133,8 @@ class GroovyRestrictedTokenizer(RegexLexer):
             (r'0x[0-9a-fA-F]+', Number.Hex),
             (r'[0-9]+L?', Number.Integer),
             (r'/', String.GString.GStringBegin, 'slashy_gstring'),
+            # Silencing the escaped newline
+            (r'(\\$\n)', bygroups(None)),
             (r'\n', Whitespace),
         ],
         "base": [
