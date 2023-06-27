@@ -80,6 +80,8 @@ class GroovyRestrictedTokenizer(RegexLexer):
             # r')'
             # r'(\s*)(\()',                          # signature start
             # bygroups(using(this), Name.Function, Whitespace, Operator)),
+            (r'(@)(interface)(\s+)', bygroups(Keyword, Keyword.Declaration, Whitespace),
+             'class'),
             (r'@[a-zA-Z_][\w.]*', Name.Decorator),
             (r'(abstract|const|extends|final|implements|native|private|'
              r'protected|public|static|strictfp|super|synchronized|throws|'

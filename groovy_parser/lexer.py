@@ -53,6 +53,7 @@ GMAPPER = {
          None: None,
     },
     Token.Keyword: {
+        "@": 'AT',
         "as": 'AS',
         "def": 'DEF',
         "in": 'IN',
