@@ -215,7 +215,7 @@ class GroovyRestrictedTokenizer(RegexLexer):
         'dolar_slashy_gstring': [
             (r'/\$', String.GString.GStringEnd, '#pop'),
             include('gstring_common'),
-            (r'[^$]+', String.Double),
+            (r'[^/$]+(?:/+[^/$]+)*', String.Double),
             (r'\$\$', String.Escape),    # Escapes $ " and others
             (r'\$/', String.Escape),    # Escapes $ " and others
         ],
