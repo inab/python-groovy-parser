@@ -27,54 +27,6 @@ from lark.lexer import Lexer, Token as LarkToken
 
 # Mapping between Pygment tokens and TERMINALS
 # used in groovy grammar
-COMBINED_OPERATORS = [
-    '..',
-    '<..',
-    '..<',
-    '<..<',
-    '*.',
-    '?.',
-    '?[',
-    '??.',
-    '?:',
-    '.&',
-    '::',
-    '=~',
-    '==~',
-    '**',
-    '**=',
-    '<=>',
-    '===',
-    '!==',
-    '->',
-    '!instanceof',
-    '!in',
-    '==',
-    '<=',
-    '>=',
-    '!=',
-    '&&',
-    '||',
-    '++',
-    '--',
-    '+=',
-    '-=',
-    '*=',
-    '/=',
-    '&=',
-    '|=',
-    '^=',
-    '%=',
-    '<<=',
-    '>>=',
-    '>>>=',
-    '?=',
-    '...',
-]
-
-COMBINED_OPERATORS_HASH = dict()
-for c in COMBINED_OPERATORS:
-    COMBINED_OPERATORS_HASH.setdefault(c[0],[]).append(c)
 
 GMAPPER = {
     Token.Name: {
@@ -162,6 +114,7 @@ GMAPPER = {
         'this': "THIS",
         'throw': "THROW",
         'throws': "THROWS",
+        'trait': "TRAIT",
         'transient': "TRANSIENT",
         'try': "TRY",
         'void': "VOID",
@@ -198,8 +151,8 @@ GMAPPER = {
         ">": "GT",
         
         "<<": "LSHIFT",
-        ">>": "RSHIFT",
-        ">>>": "URSHIFT",
+        #">>": "RSHIFT",
+        #">>>": "URSHIFT",
         
         '..': "RANGE_INCLUSIVE",
         '<..': "RANGE_EXCLUSIVE_LEFT",
@@ -256,6 +209,11 @@ GMAPPER = {
     },
 }
 
+COMBINED_OPERATORS_HASH = dict()
+for c in GMAPPER[Token.Operator].keys():
+    if (c is not None) and len(c) > 1:
+        COMBINED_OPERATORS_HASH.setdefault(c[0], []).append(c)
+
 class PygmentsGroovyLexer(Lexer):
     def __init__(self, lexer_conf):
         self.logger = logging.getLogger(
@@ -265,43 +223,89 @@ class PygmentsGroovyLexer(Lexer):
         )
         pass
 
-    def lex(self, data):
+    def lex(self, data: "Sequence[Tuple[Token, str]]") -> "Iterator[LarkToken]":
         # Operators like == are not properly emitted
+        # So this pre-processing step helps
         tokens = list()
-        prev_token = None
-        for token in data:
-            if prev_token is not None:
+        prev_tokens = list()
+        prev_start = -1
+        combined_operators = None
+        numdata = len(data)
+        idata = 0
+        while idata < numdata:
+            token = data[idata]
+            idata += 1
+            if combined_operators is not None:
                 # Possible combined operator
-                join_token = prev_token[1] + token[1]
-                combined_operators = COMBINED_OPERATORS_HASH[join_token[0]]
-                
-                do_combine = False
+                join_token = ''.join(map(lambda t: t[1], prev_tokens)) + token[1]
+                could_combine = False
                 for combined_operator in combined_operators:
                     if combined_operator.startswith(join_token):
                         # Save it
-                        prev_token[1] = join_token
-                        do_combine = True
+                        prev_tokens.append(token)
+                        could_combine = True
                         break
                 
-                if do_combine:
+                if could_combine:
                     # As it was combined, jump
                     continue
+                elif len(prev_tokens) == 1:
+                    tokens.append(prev_tokens[0])
+                    combined_operators = None
                 else:
                     # Emit previous, and continue the processing
-                    tokens.append((prev_token[0],prev_token[1]))
-                    prev_token = None
+                    for si in range(len(prev_tokens), 1, -1):
+                        join_token = ''.join(map(lambda t: t[1], prev_tokens[:si]))
+                        for combined_operator in combined_operators:
+                            if combined_operator == join_token:
+                                tokens.append((prev_tokens[0][0], join_token))
+                                could_combine = True
+                                break
+                        
+                        if could_combine:
+                            prev_start += si - 1
+                            break
+                    else:
+                        tokens.append(prev_tokens[0])
+                    
+                    idata = prev_start
+                    combined_operators = None
+                    continue
             
             if token[0] == Token.Operator:
                 # Possible combined operator
-                if token[1][0] in COMBINED_OPERATORS_HASH:
-                    prev_token = [token[0], token[1]]
+                combined_operators = COMBINED_OPERATORS_HASH.get(token[1][0])
+                if combined_operators is not None:
+                    prev_tokens = [ token ]
+                    prev_start = idata
                 else:
                     tokens.append(token)
             else:
                 tokens.append(token)
+            
         
-        if prev_token is not None:
-            tokens.append(prev_token)
+        if combined_operators is not None:
+            while prev_tokens:
+                if len(prev_tokens) == 1:
+                    tokens.append(prev_tokens[0])
+                    prev_tokens = []
+                else:
+                    # Emit previous, and continue the processing
+                    for si in range(len(prev_tokens), 1, -1):
+                        join_token = ''.join(map(lambda t: t[1], prev_tokens[:si]))
+                        could_combine = False
+                        for combined_operator in combined_operators:
+                            if combined_operator == join_token:
+                                tokens.append((prev_tokens[0][0], join_token))
+                                prev_tokens = prev_tokens[si:]
+                                could_combine = True
+                                break
+                        
+                        if could_combine:
+                            break
+                    else:
+                        tokens.append(prev_tokens[0])
+                        prev_tokens = prev_tokens[1:]
 
         # Lex itself
         start_pos = 0
