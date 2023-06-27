@@ -78,31 +78,11 @@ for c in COMBINED_OPERATORS:
 
 GMAPPER = {
     Token.Name: {
-        #"include": 'INCLUDE',
-        #"from": 'FROM',
-        #"template": 'TEMPLATE',
-        #"container": 'CONTAINER',
-        #"conda": 'CONDA',
-        #"process": 'PROCESS',
-        #"workflow": 'WORKFLOW',
         None: 'IDENTIFIER',
     },
     Token.Name.Attribute: {
         None: 'IDENTIFIER',
     },
-    #Token.Name.Label: {
-    #    "take:": 'TAKE_LABEL',
-    #    "main:": 'MAIN_LABEL',
-    #    "emit:": 'EMIT_LABEL',
-    #    "input:": 'INPUT_LABEL',
-    #    "output:": 'OUTPUT_LABEL',
-    #    "when:": 'WHEN_LABEL',
-    #    "script:": 'SCRIPT_LABEL',
-    #    "shell:": 'SHELL_LABEL',
-    #    "exec:": 'EXEC_LABEL',
-    #    "stub:": 'STUB_LABEL',
-    #    None: 'LABEL',
-    #},
     Token.Text.Whitespace: {
          "\n": 'NL',
     #     None: 'WHITESPACE',
@@ -355,6 +335,9 @@ class PygmentsGroovyLexer(Lexer):
                 ltok = token_map.get(token)
                 if ltok is None:
                     ltok = token_map.get(None)
+                
+                if ltok == 'IDENTIFIER' and raw_token[0].isupper():
+                    ltok = 'CAPITALIZED_IDENTIFIER'
             elif token_type == Token.Literal.String.Single:
                 if token.startswith("'''"):
                     token = raw_token[3:-3]
