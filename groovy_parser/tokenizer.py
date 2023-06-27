@@ -190,11 +190,12 @@ class GroovyRestrictedTokenizer(RegexLexer):
             (r'""', String.Double),
         ],
         'slashy_gstring': [
-            (r'/', String.GString.GStringEnd, '#pop'),
+            (r'\\\\/', String.Escape),    # Escapes /
             include('gstring_common_escape'),
             (r'[^$\\/]+', String.Double),
             # This is needed for regular expressions
             (r'\$', String.Double),
+            (r'/', String.GString.GStringEnd, '#pop'),
         ],
         'dolar_slashy_gstring': [
             (r'/\$', String.GString.GStringEnd, '#pop'),
