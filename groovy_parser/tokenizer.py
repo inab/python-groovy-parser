@@ -100,9 +100,9 @@ class GroovyRestrictedTokenizer(RegexLexer):
             # Disambiguation between division and slashy gstrings
             (r'/=', Operator),
             # See https://docs.groovy-lang.org/docs/latest/html/documentation/#_numbers
-            (r'[0-9](?:_?[0-9]+)*(?:\.[0-9](?:_?[0-9]+)*)?(?:[+-]?[eE][0-9]+)?[FfDdLlGg]?', Number.Float, 'after_number'),
             (r'0b[01](?:_?[01]+)*[LlGg]?', Number.Binary, 'after_number'),
             (r'0x[0-9a-fA-F](?:_?[0-9a-fA-F]+)*[LlGg]?', Number.Hex, 'after_number'),
+            (r'[0-9](?:_?[0-9]+)*(?:\.[0-9](?:_?[0-9]+)*)?(?:[+-]?[eE][0-9]+)?[FfDdLlGg]?', Number.Float, 'after_number'),
             # Both decimal and octal
             (r'0?[0-9](?:_?[0-9]+)*[LlGg]?', Number.Integer, 'after_number'),
             

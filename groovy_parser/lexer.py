@@ -206,7 +206,7 @@ GMAPPER = {
         None: 'FLOATING_POINT_LITERAL',
     },
     Token.Literal.Number: {
-        None: 'NUMBER',
+        None: 'INTEGER_LITERAL',
     },
 }
 
