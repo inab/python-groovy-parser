@@ -279,7 +279,7 @@ cast_par_expression : LPAREN type rparen
 
 par_expression : expression_in_par
 
-expression_in_par : LPAREN enhanced_statement_expression rparen
+expression_in_par : LPAREN nls enhanced_statement_expression nls rparen
 
 expression_list : expression_list_element ( nls COMMA nls expression_list_element nls )*
 
