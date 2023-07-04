@@ -27,7 +27,7 @@ modifiers_opt : ( modifiers nls )?
 
 modifiers : modifier ( nls modifier )*
 
-class_or_interface_modifiers_opt : ( class_or_interface_modifiers NL* )?
+class_or_interface_modifiers_opt : ( class_or_interface_modifiers nls )?
 
 class_or_interface_modifiers : class_or_interface_modifier ( nls class_or_interface_modifier )*
 
@@ -58,7 +58,9 @@ variable_modifiers : variable_modifier ( nls variable_modifier )*
 
 type_parameters : LT nls type_parameter ( COMMA nls type_parameter )* nls GT
 
-type_parameter : class_name ( EXTENDS nls type_bound )?
+// type_parameter : class_name ( EXTENDS nls type_bound )?
+
+type_parameter : annotations_opt class_name ( EXTENDS nls type_bound )?
 
 type_bound : type ( BITAND nls type )*
 
@@ -81,6 +83,7 @@ member_declaration : method_declaration
 
 method_declaration : modifiers_opt type_parameters? ( return_type nls )? method_name formal_parameters ( DEFAULT nls element_value | ( nls THROWS nls qualified_class_name_list )? ( nls method_body )? )?
 
+// This rule contains a static_gstring to model what it is found in real life, but not in original grammar
 method_name : identifier
            | string_literal
            | static_gstring
@@ -98,8 +101,9 @@ variable_declarator_id : identifier
 
 variable_initializer : enhanced_statement_expression
 
-variable_initializers : variable_initializer nls ( COMMA nls variable_initializer nls )* COMMA?
+variable_initializers : variable_initializer ( nls COMMA nls variable_initializer )* nls COMMA?
 
+// This rule also differs from the original grammar, due real life cases found 
 empty_dims : ( annotations_opt LBRACK nls RBRACK )+
 
 empty_dims_opt : empty_dims?
@@ -141,13 +145,16 @@ qualified_name_element : identifier
            | DEF
            | IN
            | AS
-           | TRAIT
+// This one already appears under 'identifier' definition
+//           | TRAIT
 
-qualified_name_elements : ( qualified_name_element DOT )*
+// Next three rules were changed to something more meaningful according
+// 'qualified_name_elements' names, as it is not finished with '_opt'
+qualified_name_elements : ( qualified_name_element DOT )+
 
-qualified_class_name : qualified_name_elements identifier
+qualified_class_name : qualified_name_elements? identifier
 
-qualified_standard_class_name : qualified_name_elements class_name ( DOT class_name )*
+qualified_standard_class_name : qualified_name_elements? class_name ( DOT class_name )*
 
 literal : INTEGER_LITERAL
            | FLOATING_POINT_LITERAL
@@ -155,13 +162,26 @@ literal : INTEGER_LITERAL
            | BOOLEAN_LITERAL
            | NULL_LITERAL
 
+// This definition is not in the original grammar
 static_gstring : GSTRING_BEGIN STRING_LITERAL_PART+ GSTRING_END
 
-gstring : GSTRING_BEGIN (STRING_LITERAL_PART* GSTRING_PART gstring_value )* STRING_LITERAL_PART* GSTRING_END
+// This definition vastly differs from the original grammar due the way
+// the tokenizer had to be built in order to capture the mangling details
+// of correct gstrings (specially, slashy ones)
+// gstring : GSTRING_BEGIN gstring_value (GSTRING_PART  gstring_value)* GSTRING_END
+
+// First implementation
+//gstring : GSTRING_BEGIN STRING_LITERAL_PART* (GSTRING_PART gstring_value STRING_LITERAL_PART* )* GSTRING_END
+
+// Current one, which seems to consume sometimes more memory
+gstring : GSTRING_BEGIN GSTRING_END
+        | static_gstring
+        | GSTRING_BEGIN STRING_LITERAL_PART* (GSTRING_PART gstring_value STRING_LITERAL_PART*)+ GSTRING_END
 
 gstring_value : gstring_path
            | closure
 
+// This rule was rewritten to accommodate to the lexer limitations
 // gstring_path : identifier GSTRING_PATH_PART*
 
 gstring_path : identifier
@@ -179,7 +199,9 @@ standard_lambda_parameters : formal_parameters
 lambda_body : block
            | statement_expression
 
-closure : LBRACE ( nls ( formal_parameter_list nls )? ARROW )? sep? block_statements_opt RBRACE
+// This one differs in order to optimize
+closure : block
+        | LBRACE nls ( formal_parameter_list nls )? ARROW sep? block_statements_opt RBRACE
 
 closure_or_lambda_expression : closure
            | lambda_expression
@@ -188,7 +210,7 @@ block_statements_opt : block_statements?
 
 block_statements : block_statement ( sep block_statement )* sep?
 
-annotations_opt : ( annotation nls )*
+annotations_opt : (annotation (nls annotation)* nls)?
 
 annotation : AT annotation_name ( nls LPAREN element_values? rparen )?
 
@@ -208,6 +230,8 @@ element_value : element_value_array_initializer
            | annotation
            | expression
 
+// This one has additional nls elements due the way the differences
+// in the tokenizer and lexer implementation
 element_value_array_initializer : LBRACK ( nls element_value ( nls COMMA element_value )* nls COMMA? )? nls RBRACK
 
 block : LBRACE sep? block_statements_opt RBRACE
@@ -233,8 +257,9 @@ if_else_statement : IF expression_in_par nls statement ( ( nls | sep ) ELSE nls 
 
 switch_statement : SWITCH expression_in_par nls LBRACE nls ( switch_block_statement_group+ nls )? RBRACE
 
-loop_statement : ( FOR LPAREN for_control rparen | WHILE expression_in_par ) nls statement
-           | DO nls statement nls WHILE expression_in_par
+loop_statement : FOR LPAREN for_control rparen nls statement
+            | WHILE expression_in_par nls statement
+            | DO nls statement nls WHILE expression_in_par
 
 continue_statement : CONTINUE identifier?
 
@@ -244,7 +269,23 @@ try_catch_statement : TRY resources? nls block ( nls catch_clause )* ( nls final
 
 assert_statement : ASSERT expression ( nls ( COLON | COMMA ) nls expression )?
 
-statement : ( identifier COLON nls )* ( ( SYNCHRONIZED expression_in_par nls )? block | conditional_statement | loop_statement | try_catch_statement | RETURN expression? | THROW expression | break_statement | continue_statement | assert_statement | local_variable_declaration | statement_expression | SEMI )
+// Originally generated
+// statement : ( identifier COLON nls )* ( ( SYNCHRONIZED expression_in_par nls )? block | conditional_statement | loop_statement | try_catch_statement | RETURN expression? | THROW expression | break_statement | continue_statement | assert_statement | local_variable_declaration | statement_expression | SEMI )
+
+statement : block
+        |   conditional_statement
+        |   loop_statement
+        |   try_catch_statement
+        |   SYNCHRONIZED expression_in_par nls block
+        |   RETURN expression?
+        |   THROW expression
+        |   break_statement
+        |   continue_statement
+        |   identifier COLON nls statement
+        |   assert_statement
+        |   local_variable_declaration
+        |   statement_expression
+        |   SEMI
 
 catch_clause : CATCH LPAREN variable_modifiers_opt catch_type? identifier rparen nls block
 
@@ -259,9 +300,10 @@ resource_list : resource ( sep resource )*
 resource : local_variable_declaration
            | expression
 
-switch_block_statement_group : ( switch_label nls )+ block_statements
+switch_block_statement_group : switch_label (nls switch_label)* nls block_statements
 
-switch_label : ( CASE expression | DEFAULT ) COLON
+switch_label : CASE expression COLON
+            | DEFAULT COLON
 
 for_control : enhanced_for_control
            | classical_for_control
@@ -279,6 +321,7 @@ cast_par_expression : LPAREN type rparen
 
 par_expression : expression_in_par
 
+// Next two rules have additional nls in order to be adapted to the tokenizer and lexer
 expression_in_par : LPAREN nls enhanced_statement_expression nls rparen
 
 expression_list : expression_list_element ( nls COMMA nls expression_list_element nls )*
@@ -292,15 +335,45 @@ statement_expression : command_expression
 
 postfix_expression : path_expression ( INC | DEC )?
 
-expression : ( cast_par_expression ( cast_par_expression | ( BITNOT | NOT ) nls | INC | DEC | ADD | SUB )* )? postfix_expression
-           | ( ( BITNOT | NOT ) nls | INC | DEC | ADD | SUB ) expression
-           | IF nls expression nls COLON nls expression (nls ELSE nls expression)? 
-           | expression ( ( POWER | ADD | SUB ) nls expression | nls ( ( MUL | DIV | MOD | LT | LSHIFT | GT (GT GT?)? | RSHIFT | URSHIFT | RANGE_INCLUSIVE | RANGE_EXCLUSIVE | RANGE_EXCLUSIVE_LEFT | RANGE_EXCLUSIVE_RIGHT | RANGE_EXCLUSIVE_FULL | LE | GE | IN | NOT_IN | IDENTICAL | NOT_IDENTICAL | EQUAL | NOTEQUAL | SPACESHIP | REGEX_FIND | REGEX_MATCH | BITAND | XOR | BITOR | AND | OR | QUESTION nls expression nls COLON | ELVIS ) nls expression | ( AS | INSTANCEOF | NOT_INSTANCEOF ) nls type | ( ASSIGN | ADD_ASSIGN | SUB_ASSIGN | MUL_ASSIGN | DIV_ASSIGN | AND_ASSIGN | OR_ASSIGN | XOR_ASSIGN | RSHIFT_ASSIGN | URSHIFT_ASSIGN | LSHIFT_ASSIGN | MOD_ASSIGN | POWER_ASSIGN | ELVIS_ASSIGN ) nls enhanced_statement_expression ) )
-           | variable_names nls ASSIGN nls statement_expression
+// The originally translated block is commented out in favour of
+// the block based in the base parser, but including the one line IF expressions
+//expression : ( cast_par_expression ( cast_par_expression | ( BITNOT | NOT ) nls | INC | DEC | ADD | SUB )* )? postfix_expression
+//           | ( ( BITNOT | NOT ) nls | INC | DEC | ADD | SUB ) expression
+//           | IF nls expression nls COLON nls expression (nls ELSE nls expression)? 
+//           | expression ( ( POWER | ADD | SUB ) nls expression | nls ( ( MUL | DIV | MOD | LT | LSHIFT | GT (GT GT?)? | RSHIFT | URSHIFT | RANGE_INCLUSIVE | RANGE_EXCLUSIVE_LEFT | RANGE_EXCLUSIVE_RIGHT | RANGE_EXCLUSIVE_FULL | LE | GE | IN | NOT_IN | IDENTICAL | NOT_IDENTICAL | EQUAL | NOTEQUAL | SPACESHIP | REGEX_FIND | REGEX_MATCH | BITAND | XOR | BITOR | AND | OR | QUESTION nls expression nls COLON | ELVIS ) nls expression | ( AS | INSTANCEOF | NOT_INSTANCEOF ) nls type | ( ASSIGN | ADD_ASSIGN | SUB_ASSIGN | MUL_ASSIGN | DIV_ASSIGN | AND_ASSIGN | OR_ASSIGN | XOR_ASSIGN | RSHIFT_ASSIGN | URSHIFT_ASSIGN | LSHIFT_ASSIGN | MOD_ASSIGN | POWER_ASSIGN | ELVIS_ASSIGN ) nls enhanced_statement_expression ) )
+//           | variable_names nls ASSIGN nls statement_expression
+
+expression : cast_par_expression cast_operand_expression
+            | postfix_expression
+            | (BITNOT | NOT) nls expression
+            | expression POWER nls expression
+            | (INC | DEC | ADD | SUB) expression
+            | expression nls (MUL | DIV | MOD) nls expression
+            | expression (ADD | SUB) nls expression
+            | expression nls ( ( LSHIFT | GT GT GT | GT GT ) | ( RANGE_INCLUSIVE | RANGE_EXCLUSIVE_LEFT | RANGE_EXCLUSIVE_RIGHT | RANGE_EXCLUSIVE_FULL ) ) nls expression
+            | expression nls (AS | INSTANCEOF | NOT_INSTANCEOF) nls type
+            | expression nls (LE | GE | GT | LT | IN | NOT_IN) nls expression
+            | expression nls ( IDENTICAL | NOT_IDENTICAL | EQUAL | NOTEQUAL | SPACESHIP ) nls expression
+            | expression nls (REGEX_FIND | REGEX_MATCH) nls expression
+            | expression nls BITAND nls expression
+            | expression nls XOR nls expression
+            | expression nls BITOR nls expression
+            | expression nls AND nls expression
+            | expression nls OR nls expression
+            | expression nls ( QUESTION nls expression nls COLON nls | ELVIS nls ) expression
+            | IF nls expression nls COLON nls expression nls ELSE nls expression 
+            | variable_names nls ASSIGN nls statement_expression
+            | expression nls ( ASSIGN | ADD_ASSIGN | SUB_ASSIGN | MUL_ASSIGN | DIV_ASSIGN | AND_ASSIGN | OR_ASSIGN | XOR_ASSIGN | RSHIFT_ASSIGN | URSHIFT_ASSIGN | LSHIFT_ASSIGN | MOD_ASSIGN | POWER_ASSIGN | ELVIS_ASSIGN ) nls enhanced_statement_expression
+
+cast_operand_expression : cast_par_expression cast_operand_expression
+                        | postfix_expression
+                        | (BITNOT | NOT) nls cast_operand_expression
+                        | (INC | DEC | ADD | SUB) cast_operand_expression
 
 command_expression : expression argument_list? command_argument*
 
-command_argument : command_primary ( path_element* | argument_list )
+// Fixed according official grammar
+command_argument : command_primary ( path_element+ | argument_list )?
 
 path_expression : ( primary | STATIC ) path_element*
 
@@ -319,6 +392,8 @@ dynamic_member_name : par_expression
 
 index_property_args : (SAFE_INDEX | LBRACK) expression_list? RBRACK
 
+// This rule has extra nls to adequate to what it is emitted by the
+// tokenizer and lexer (are they really needed?)
 named_property_args : (SAFE_INDEX | LBRACK) nls ( named_property_arg_list | COLON ) nls RBRACK
 
 primary : identifier type_arguments?
@@ -334,20 +409,22 @@ primary : identifier type_arguments?
            | built_in_type
 
 named_property_arg_primary : identifier
-           | literal
-           | gstring
-           | par_expression
-           | list
-           | map
+                           | literal
+                           | gstring
+                           | par_expression
+                           | list
+                           | map
 
 named_arg_primary : identifier
-           | literal
-           | gstring
+                   | literal
+                   | gstring
 
 command_primary : identifier
-           | literal
-           | gstring
+               | literal
+               | gstring
 
+// Next 3 rules have extra nls to adequate to what it is emitted by the
+// tokenizer and lexer (are they really needed?)
 list : LBRACK nls expression_list? nls COMMA? nls RBRACK
 
 map : LBRACK nls ( map_entry_list nls COMMA? | COLON ) nls RBRACK
@@ -356,20 +433,25 @@ map_entry_list : map_entry nls ( COMMA nls map_entry )*
 
 named_property_arg_list : named_property_arg ( COMMA named_property_arg )*
 
-map_entry : ( map_entry_label | MUL ) COLON nls expression
+mul_colon_expression : MUL COLON nls expression
 
-named_property_arg : ( named_property_arg_label | MUL ) COLON nls expression
+map_entry : map_entry_label COLON nls expression
+            | mul_colon_expression
 
-named_arg : ( named_arg_label | MUL ) COLON nls expression
+named_property_arg : named_property_arg_label COLON nls expression
+                    | mul_colon_expression
+
+named_arg : named_arg_label COLON nls expression
+            | mul_colon_expression
 
 map_entry_label : keywords
-           | primary
+                | primary
 
 named_property_arg_label : keywords
-           | named_property_arg_primary
+                        | named_property_arg_primary
 
 named_arg_label : keywords
-           | named_arg_primary
+                | named_arg_primary
 
 creator : created_name ( nls arguments anonymous_inner_class_declaration? | dim+ ( nls array_initializer )? )
 
@@ -386,6 +468,8 @@ non_wildcard_type_arguments : LT nls type_list nls GT
 type_arguments_or_diamond : LT GT
            | type_arguments
 
+// Next rule has extra nls to adequate to what it is emitted by the
+// tokenizer and lexer (are they really needed?)
 arguments : LPAREN nls enhanced_argument_list_in_par? nls COMMA? nls rparen
 
 argument_list : first_argument_list_element ( COMMA nls argument_list_element )*
@@ -395,18 +479,25 @@ enhanced_argument_list : first_enhanced_argument_list_element ( COMMA nls enhanc
 enhanced_argument_list_in_par : enhanced_argument_list_element ( COMMA nls enhanced_argument_list_element )*
 
 first_argument_list_element : expression_list_element
-           | named_arg
+                            | named_arg
 
 argument_list_element : expression_list_element
-           | named_property_arg
+                        | named_property_arg
+
+// These seem to consume more memory
+// first_enhanced_argument_list_element : first_argument_list_element
+//                                     | standard_lambda_expression
+//  
+// enhanced_argument_list_element : argument_list_element
+//                                 | standard_lambda_expression
 
 first_enhanced_argument_list_element : expression_list_element
-           | standard_lambda_expression
-           | named_arg
+                                    | standard_lambda_expression
+                                    | named_arg
 
 enhanced_argument_list_element : expression_list_element
-           | standard_lambda_expression
-           | named_property_arg
+                                | standard_lambda_expression
+                                | named_property_arg
 
 string_literal : STRING_LITERAL
 
@@ -474,14 +565,15 @@ keywords : ABSTRACT
            | PROTECTED
            | PRIVATE
 
+// This one is borrowed from the original ANTLR lexer
 built_in_primitive_type: BOOLEAN
-    |   CHAR
-    |   BYTE
-    |   SHORT
-    |   INT
-    |   LONG
-    |   FLOAT
-    |   DOUBLE
+                        |   CHAR
+                        |   BYTE
+                        |   SHORT
+                        |   INT
+                        |   LONG
+                        |   FLOAT
+                        |   DOUBLE
 
 rparen : RPAREN
 
@@ -548,6 +640,7 @@ sep : ( NL | SEMI )+
 %declare GSTRING_END
 %declare GSTRING_PART
 %declare GSTRING_PATH
+// This symbol is not emitted by the lexer
 %declare GSTRING_PATH_PART
 %declare GT
 %declare GUNTHER
@@ -593,6 +686,8 @@ sep : ( NL | SEMI )+
 %declare PUBLIC
 %declare QUESTION
 %declare RADEMACHER
+// This symbol is not emitted by the lexer
+// but the RANGE_EXCLUSIVE_RIGHT one
 %declare RANGE_EXCLUSIVE
 %declare RANGE_EXCLUSIVE_FULL
 %declare RANGE_EXCLUSIVE_LEFT
