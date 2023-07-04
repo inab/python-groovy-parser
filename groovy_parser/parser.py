@@ -20,34 +20,43 @@
 
 import importlib.resources
 import json
-from typing import TYPE_CHECKING
+from typing import (
+    cast,
+    TYPE_CHECKING,
+)
+
 if TYPE_CHECKING:
     from typing import (
         Any,
         Mapping,
+        MutableSequence,
         Sequence,
         Union,
     )
-    import lark
-    
+    from lark.tree import ParseTree
+
     from typing_extensions import (
         TypedDict,
     )
-    
+
+    class EmptyNode(TypedDict):
+        pass
+
     class LeafNode(TypedDict):
         leaf: "str"
-        value: "Any"
-    
+        value: "str"
+
     class RuleNode(TypedDict):
         rule: "Sequence[str]"
-        children: "Sequence[Union[LeafNode, RuleNode]]"
+        children: "Sequence[Union[EmptyNode, LeafNode, RuleNode]]"
+
 
 from lark import (
     Lark,
 )
 from lark import Tree as LarkTree
 from lark.lexer import Token as LarkToken
-import lark.exceptions
+from lark.exceptions import ParseError as LarkParseError
 
 from .tokenizer import (
     GroovyRestrictedTokenizer,
@@ -56,39 +65,53 @@ from .lexer import (
     PygmentsGroovyLexer,
 )
 
-class LarkTokenEncoder(json.JSONEncoder):
-    def default(self, obj: "Any") -> "LeafNode":
-        if isinstance(obj, LarkToken):
 
+class LarkTokenEncoder(json.JSONEncoder):
+    def default(
+        self,
+        obj: "Any",
+    ) -> "LeafNode":
+        if isinstance(obj, LarkToken):
             return {
                 "leaf": obj.type,
-#                "value": json.JSONEncoder.default(self, obj.value[1] if isinstance(obj.value, tuple) else obj.value),
+                #                "value": json.JSONEncoder.default(self, obj.value[1] if isinstance(obj.value, tuple) else obj.value),
                 "value": (obj.value[1] if isinstance(obj.value, tuple) else obj.value),
             }
 
         # Let the base class default method raise the TypeError
-        return json.JSONEncoder.default(self, obj)
+        return cast("LeafNode", json.JSONEncoder.default(self, obj))
+
 
 class LarkFilteringTreeEncoder(LarkTokenEncoder):
-    def default(self, obj: "Any", rule = [], prune=["sep", "nls"], noflat=["script_statement"]) -> "Union[LeafNode, RuleNode]":
+    def default(  # type: ignore[override]
+        self,
+        obj: "Any",
+        rule: "Sequence[str]" = [],
+        prune: "Sequence[str]" = ["sep", "nls"],
+        noflat: "Sequence[str]" = ["script_statement"],
+    ) -> "Union[LeafNode, RuleNode, EmptyNode]":
         if isinstance(obj, LarkTree):
-            new_rule = rule[:]
-            new_rule.append(obj.data.value)
+            new_rule = cast("MutableSequence[str]", rule[:])
+            # This is needed because the type annotation of the data
+            # facet from a lark tree is str instead of Token
+            # (which is a subclass of str)
+            new_rule.append(cast("LarkToken", obj.data).value)
             children = []
             for child in obj.children:
                 if isinstance(child, LarkTree) and child.data in prune:
                     continue
                 children.append(child)
             if children:
-                if len(children) == 1 and isinstance(children[0], LarkTree) and children[0].data not in noflat:
+                if (
+                    len(children) == 1
+                    and isinstance(children[0], LarkTree)
+                    and children[0].data not in noflat
+                ):
                     return self.default(children[0], rule=new_rule)
                 else:
                     return {
                         "rule": new_rule,
-                        "children": [
-                            self.default(child)
-                            for child in children
-                        ]
+                        "children": [self.default(child) for child in children],
                     }
             else:
                 # No children!!!!!!!
@@ -103,35 +126,39 @@ def create_groovy_parser() -> "Lark":
         "GROOVY_3_0_X/master_groovy_parser.g",
         rel_to=__file__,
         lexer=PygmentsGroovyLexer,
-    #    parser='lalr',
-    #    debug=True,
-        start='compilation_unit',
-        #lexer_callbacks={
+        #    parser='lalr',
+        #    debug=True,
+        start="compilation_unit",
+        # lexer_callbacks={
         #    'square_bracket_block': jarlmethod
-        #}
+        # }
     )
-    
+
     return parser
 
-def parse_groovy_content(content: "str") -> "LarkTree":
+
+def parse_groovy_content(content: "str") -> "ParseTree":
     parser = create_groovy_parser()
 
     try:
         gResLex = GroovyRestrictedTokenizer()
-        #import logging
-        #tokens = []
-        #for tok in gResLex.get_tokens(content):
+        # import logging
+        # tokens = []
+        # for tok in gResLex.get_tokens(content):
         #    logging.info(f"TOK {tok}")
         #    tokens.append(tok)
         tokens = list(gResLex.get_tokens(content))
+        # The type ignore is needed due the poor type annotation of
+        # lark, which assumes the input is always a string
         tree = parser.parse(
-            tokens,
-        #    on_error=handle_errors
+            tokens,  # type: ignore[arg-type]
+            #    on_error=handle_errors
         )
-    except lark.exceptions.ParseError as pe:
+    except LarkParseError as pe:
         raise pe
 
     return tree
 
-def digest_lark_tree(tree: "LarkTree") -> "Union[RuleNode, LeafNode]":
+
+def digest_lark_tree(tree: "ParseTree") -> "Union[RuleNode, LeafNode, EmptyNode]":
     return LarkFilteringTreeEncoder().default(tree)
