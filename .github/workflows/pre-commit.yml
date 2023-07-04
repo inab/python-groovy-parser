@@ -25,16 +25,13 @@ jobs:
             dev-requirements.txt
           architecture: x64
       - name: 'Install requirements (standard)'
-        if: steps.cachepy.outputs.cache-hit != 'true'
         run: |
           pip install --upgrade pip wheel
           pip install -r requirements.txt
       - name: 'Freeze Python ${{ matrix.python-version }} constraints'
-        if: steps.cachepy.outputs.cache-hit != 'true'
         run: |
           pip freeze > constraints-${{ matrix.python-version }}.txt
       - name: 'Install dev requirements'
-        if: steps.cachepy.outputs.cache-hit != 'true'
         run: pip install -r dev-requirements.txt -r mypy-requirements.txt
       - name: MyPy cache
         uses: actions/cache@v3
