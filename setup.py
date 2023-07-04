@@ -35,42 +35,45 @@ from groovy_parser import __license__ as gp_license
 # Populating the long description
 readme_path = os.path.join(setupDir, "README.md")
 with open(readme_path, "r") as fh:
-	long_description = fh.read()
+    long_description = fh.read()
 
 # Populating the install requirements
 requirements = []
 requirements_path = os.path.join(setupDir, "requirements.txt")
 if os.path.exists(requirements_path):
-	with open(requirements_path) as f:
-		egg = re.compile(r"#[^#]*egg=([^=&]+)")
-		for line in f.read().splitlines():
-			m = egg.search(line)
-			requirements.append(line if m is None else m.group(1))
+    with open(requirements_path) as f:
+        egg = re.compile(r"#[^#]*egg=([^=&]+)")
+        for line in f.read().splitlines():
+            m = egg.search(line)
+            requirements.append(line if m is None else m.group(1))
 
 setuptools.setup(
-	name="groovy-parser",
-	version=gp_version,
-	author=gp_author,
-	author_email="jose.m.fernandez@bsc.es",
-	license=gp_license,
-	description="Proof of concept Groovy parser based on Pygments and Lark",
-	long_description=long_description,
-	long_description_content_type="text/markdown",
-	url="https://github.com/inab/python_groovy_parser",
-	project_urls={"Bug Tracker": "https://github.com/inab/python_groovy_parser/issues"},
-	packages=setuptools.find_packages(),
-	package_data={
-		"groovy_parser": [
-	#		"py.typed",
-			"GROOVY_3_0_X/master_groovy_parser.g",
-		]
-	},
-	install_requires=requirements,
-	classifiers=[
-		"Programming Language :: Python :: 3",
-		"Development Status :: 3 - Alpha",
-		"License :: OSI Approved :: Apache Software License",
-		"Operating System :: OS Independent",
-	],
-	python_requires=">=3.7",
+    name="groovy-parser",
+    version=gp_version,
+    author=gp_author,
+    author_email="jose.m.fernandez@bsc.es",
+    license=gp_license,
+    description="Groovy 3.0.x parser based on Pygments and Lark",
+    long_description=long_description,
+    long_description_content_type="text/markdown",
+    url="https://github.com/inab/python-groovy-parser",
+    project_urls={"Bug Tracker": "https://github.com/inab/python-groovy-parser/issues"},
+    packages=setuptools.find_packages(),
+    package_data={
+        "groovy_parser": [
+            "py.typed",
+            "GROOVY_3_0_X/master_groovy_parser.g",
+        ]
+    },
+    scripts=[
+        "translated-groovy3-parser.py",
+    ],
+    install_requires=requirements,
+    classifiers=[
+        "Programming Language :: Python :: 3",
+        "Development Status :: 3 - Alpha",
+        "License :: OSI Approved :: Apache Software License",
+        "Operating System :: OS Independent",
+    ],
+    python_requires=">=3.7",
 )
