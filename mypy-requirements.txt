@@ -1,3 +1,4 @@
 types-setuptools
 types-Pygments
+typing-extensions
 
