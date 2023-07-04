@@ -17,8 +17,8 @@
 # limitations under the License.
 
 __author__ = "José M. Fernández <https://orcid.org/0000-0002-4806-5140>"
-__copyright__ = "© 2022 Barcelona Supercomputing Center (BSC), ES"
+__copyright__ = "© 2023 Barcelona Supercomputing Center (BSC), ES"
 __license__ = "Apache-2.0"
 
 # https://www.python.org/dev/peps/pep-0396/
-__version__ = "0.0.1"
+__version__ = "0.1.0"
