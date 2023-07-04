@@ -30,6 +30,7 @@ The program takes one or more files as input.
 ```bash
 git pull https://github.com/nf-core/rnaseq.git
 translated-groovy3-parser.py $(find rnaseq -type f -name "*.nf")
+```
 
 If an input file is for instance `rnaseq/modules/local/bedtools_genomecov.nf`,
 the program generates a log file `rnaseq/modules/local/bedtools_genomecov.nf.lark`,
