@@ -217,11 +217,12 @@ class GroovyRestrictedTokenizer(RegexLexer):
             (r'[^$"\\]+', String.Double),
         ],
         "triple_gstring": [
+            (r'("+)(""")', bygroups(String.Double, String.GString.GStringEnd), "#pop"),  # type: ignore[no-untyped-call]
             (r'"""', String.GString.GStringEnd, "#pop"),
             include("gstring_common_escape"),
             (r'[^$"\\]+', String.Double),
-            (r'"', String.Double),
             (r'""', String.Double),
+            (r'"', String.Double),
         ],
         "slashy_gstring": [
             (r"\\\\/", String.Escape),  # Escapes /
