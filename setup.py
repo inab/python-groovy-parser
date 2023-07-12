@@ -41,9 +41,10 @@ with open(readme_path, "r") as fh:
 requirements = []
 requirements_path = os.path.join(setupDir, "requirements.txt")
 if os.path.exists(requirements_path):
-    with open(requirements_path) as f:
+    with open(requirements_path, mode="r", encoding="utf-8") as f:
         egg = re.compile(r"#[^#]*egg=([^=&]+)")
         for line in f.read().splitlines():
+            print(f"R {line}")
             m = egg.search(line)
             requirements.append(line if m is None else m.group(1))
 

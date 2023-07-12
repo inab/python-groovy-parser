@@ -1,0 +1,20 @@
+[build-system]
+requires = [
+	"setuptools>=42",
+	"wheel"
+]
+build-backend = "setuptools.build_meta"
+
+[mypy]
+warn_redundant_casts=true
+warn_unused_ignores=true
+
+[tool.yapf]
+based_on_style="pep8"
+continuation_align_style="valign-right"
+dedent_closing_brackets=true
+force_multiline_dict=true
+spaces_around_dict_delimiters=true
+spaces_around_list_delimiters=true
+split_all_comma_separated_values=true
+use_tabs=true
