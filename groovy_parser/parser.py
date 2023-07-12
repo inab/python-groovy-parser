@@ -18,8 +18,12 @@
 
 # https://github.com/daniellansun/groovy-antlr4-grammar-optimized/tree/master/src/main/antlr4/org/codehaus/groovy/parser/antlr4
 
+import gzip
 import importlib.resources
+import hashlib
 import json
+import os
+import os.path
 from typing import (
     cast,
     TYPE_CHECKING,
@@ -30,6 +34,7 @@ if TYPE_CHECKING:
         Any,
         Mapping,
         MutableSequence,
+        Optional,
         Sequence,
         Union,
     )
@@ -51,17 +56,23 @@ if TYPE_CHECKING:
         children: "Sequence[Union[EmptyNode, LeafNode, RuleNode]]"
 
 
-from lark import (
-    Lark,
+from pygments import (
+    __version__ as pygments_version,
 )
-from lark import Tree as LarkTree
+from lark import (
+    __version__ as lark_version,
+    Lark,
+    Tree as LarkTree,
+)
 from lark.lexer import Token as LarkToken
 from lark.exceptions import ParseError as LarkParseError
 
 from .tokenizer import (
+    __file__ as tokenizer_source_path,
     GroovyRestrictedTokenizer,
 )
 from .lexer import (
+    __file__ as lexer_source_path,
     PygmentsGroovyLexer,
 )
 
@@ -121,18 +132,23 @@ class LarkFilteringTreeEncoder(LarkTokenEncoder):
         return super().default(obj)
 
 
+GROOVY_3_0_X_GRAMMAR = os.path.join(
+    os.path.dirname(__file__), "GROOVY_3_0_X", "master_groovy_parser.g"
+)
+
+
 def create_groovy_parser() -> "Lark":
-    parser = Lark.open(
-        "GROOVY_3_0_X/master_groovy_parser.g",
-        rel_to=__file__,
-        lexer=PygmentsGroovyLexer,
-        #    parser='lalr',
-        #    debug=True,
-        start="compilation_unit",
-        # lexer_callbacks={
-        #    'square_bracket_block': jarlmethod
-        # }
-    )
+    with open(GROOVY_3_0_X_GRAMMAR, mode="r", encoding="utf-8") as gH:
+        parser = Lark(
+            gH,
+            lexer=PygmentsGroovyLexer,
+            #    parser='lalr',
+            #    debug=True,
+            start="compilation_unit",
+            # lexer_callbacks={
+            #    'square_bracket_block': jarlmethod
+            # }
+        )
 
     return parser
 
@@ -162,3 +178,72 @@ def parse_groovy_content(content: "str") -> "ParseTree":
 
 def digest_lark_tree(tree: "ParseTree") -> "Union[RuleNode, LeafNode, EmptyNode]":
     return LarkFilteringTreeEncoder().default(tree)
+
+
+SIGNATURE_FILES = [
+    GROOVY_3_0_X_GRAMMAR,
+    tokenizer_source_path,
+    lexer_source_path,
+    __file__,
+]
+
+SIGNATURE_VERSIONS = [
+    pygments_version,
+    lark_version,
+]
+
+BLOCK_SIZE = 1024 * 1024
+
+
+def parse_and_digest_groovy_content(
+    content: "str", cache_directory: "Optional[str]" = None
+) -> "Union[RuleNode, LeafNode, EmptyNode]":
+    t_tree: "Optional[Union[RuleNode, LeafNode, EmptyNode]]" = None
+    hashfile: "Optional[str]" = None
+    if cache_directory is not None and os.path.isdir(cache_directory):
+        h = hashlib.sha256()
+        buff = bytearray(BLOCK_SIZE)
+
+        # The base signature for the caching directory
+        for signature_file in SIGNATURE_FILES:
+            with open(signature_file, mode="rb") as sH:
+                numbytes = 1
+                while numbytes > 0:
+                    numbytes = sH.readinto(buff)
+                    if numbytes > 0:
+                        if numbytes < BLOCK_SIZE:
+                            h.update(buff[:numbytes])
+                        else:
+                            h.update(buff)
+
+        # Without forgetting both pygments and lark versions
+        for signature_version in SIGNATURE_VERSIONS:
+            h.update(signature_version.encode("utf-8"))
+
+        # Now we can obtain the relative directory, unique to this
+        # version of the software and its dependencies
+        hreldir = h.copy().hexdigest()
+        this_cache_directory = os.path.join(cache_directory, hreldir)
+        os.makedirs(this_cache_directory, exist_ok=True)
+
+        # Now, let's go for the content signature
+        h.update(content.encode("utf-8"))
+        hashfile = os.path.join(this_cache_directory, h.hexdigest() + ".json.gz")
+
+        if os.path.isfile(hashfile):
+            try:
+                with gzip.open(hashfile, mode="rt", encoding="utf-8") as jH:
+                    t_tree = json.load(jH)
+            except:
+                # If it is unreadable, re-create
+                pass
+
+    if t_tree is None:
+        tree = parse_groovy_content(content)
+        t_tree = LarkFilteringTreeEncoder().default(tree)
+
+        if hashfile is not None:
+            with gzip.open(hashfile, mode="wt", encoding="utf-8") as jH:
+                json.dump(t_tree, jH, sort_keys=True)
+
+    return t_tree

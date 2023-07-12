@@ -67,6 +67,7 @@ setuptools.setup(
         ]
     },
     scripts=[
+        "cached-translated-groovy3-parser.py",
         "translated-groovy3-parser.py",
     ],
     install_requires=requirements,
