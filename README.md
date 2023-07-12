@@ -20,12 +20,14 @@ You can install the development version of this package through pip just running
 pip install git+https://github.com/inab/python-groovy-parser.git
 ```
 
-## Test program
+## Test programs
 
-This repo contains a test program called [translated-groovy3-parser.py](translated-groovy3-parser.py),
-which demonstrates how to use the parser and digest it a bit.
+This repo contains a couple of test programs called
+[translated-groovy3-parser.py](translated-groovy3-parser.py) and
+[cached-translated-groovy3-parser.py](cached-translated-groovy3-parser.py),
+which demonstrate how to use the parser and digest it a bit.
 
-The program takes one or more files as input.
+The programs take one or more files as input.
 
 ```bash
 git pull https://github.com/nf-core/rnaseq.git
@@ -43,6 +45,19 @@ the parse tree into a file with extension `.lark.json` (for instance,
 And as a proof of concept, it tries to identify features from Nextflow files,
 like the declared processes, includes and workflows, and they are roughly printed
 at a file with extension `.lark.result` (for instance `rnaseq/modules/local/bedtools_genomecov.nf.lark.result`).
+
+As parsing task is heavy, the parsing module also contains a method to
+be able to cache the parsed tree in JSON format in a persistent store,
+like a filesystem. So, next operation would be expensive the first time,
+but not the next ones:
+
+```bash
+GROOVY_CACHEDIR=/tmp/somecachedir cached-translated-groovy3-parser.py $(find rnaseq -type f -name "*.nf")
+```
+
+The caching directory contents depend on the grammar and the implementations, as well as versions of the dependencies.
+So, if this software is updated (due grammar is updated or a bug is fixed),
+cached contents from previous versions are not reused.
 
 # Acknowledgements
 
