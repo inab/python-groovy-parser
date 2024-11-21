@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (C) 2023 Barcelona Supercomputing Center, José M. Fernández
+# Copyright (C) 2024 Barcelona Supercomputing Center, José M. Fernández
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -118,11 +118,23 @@ class LarkFilteringTreeEncoder(LarkTokenEncoder):
                     and isinstance(children[0], LarkTree)
                     and children[0].data not in noflat
                 ):
-                    return self.default(children[0], rule=new_rule)
+                    return self.default(
+                        children[0],
+                        rule=new_rule,
+                        prune=prune,
+                        noflat=noflat,
+                    )
                 else:
                     return {
                         "rule": new_rule,
-                        "children": [self.default(child) for child in children],
+                        "children": [
+                            self.default(
+                                child,
+                                prune=prune,
+                                noflat=noflat,
+                            )
+                            for child in children
+                        ],
                     }
             else:
                 # No children!!!!!!!
@@ -176,8 +188,16 @@ def parse_groovy_content(content: "str") -> "ParseTree":
     return tree
 
 
-def digest_lark_tree(tree: "ParseTree") -> "Union[RuleNode, LeafNode, EmptyNode]":
-    return LarkFilteringTreeEncoder().default(tree)
+def digest_lark_tree(
+    tree: "ParseTree",
+    prune: "Sequence[str]" = ["sep", "nls"],
+    noflat: "Sequence[str]" = ["script_statement"],
+) -> "Union[RuleNode, LeafNode, EmptyNode]":
+    return LarkFilteringTreeEncoder().default(
+        tree,
+        prune=prune,
+        noflat=noflat,
+    )
 
 
 SIGNATURE_FILES = [
@@ -196,7 +216,10 @@ BLOCK_SIZE = 1024 * 1024
 
 
 def parse_and_digest_groovy_content(
-    content: "str", cache_directory: "Optional[str]" = None
+    content: "str",
+    cache_directory: "Optional[str]" = None,
+    prune: "Sequence[str]" = ["sep", "nls"],
+    noflat: "Sequence[str]" = ["script_statement"],
 ) -> "Union[RuleNode, LeafNode, EmptyNode]":
     t_tree: "Optional[Union[RuleNode, LeafNode, EmptyNode]]" = None
     hashfile: "Optional[str]" = None
@@ -240,7 +263,11 @@ def parse_and_digest_groovy_content(
 
     if t_tree is None:
         tree = parse_groovy_content(content)
-        t_tree = LarkFilteringTreeEncoder().default(tree)
+        t_tree = LarkFilteringTreeEncoder().default(
+            tree,
+            prune=prune,
+            noflat=noflat,
+        )
 
         if hashfile is not None:
             with gzip.open(hashfile, mode="wt", encoding="utf-8") as jH:

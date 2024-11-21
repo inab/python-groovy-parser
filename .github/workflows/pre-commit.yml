@@ -10,11 +10,11 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [ "3.7", "3.8", "3.9", "3.10", "3.11" ]
+        python-version: [ "3.7", "3.8", "3.9", "3.10", "3.11", "3.12", "3.13" ]
     name: Pre-commit python ${{ matrix.python-version }}
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         id: cachepy
         with:
           python-version: ${{ matrix.python-version }}
@@ -34,17 +34,17 @@ jobs:
       - name: 'Install dev requirements'
         run: pip install -r dev-requirements.txt -r mypy-requirements.txt
       - name: MyPy cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: .mypy_cache/${{ matrix.python-version }}
           key: mypy-${{ matrix.python-version }}
       - name: 'pre-commit'
-        uses: pre-commit/action@v3.0.0
+        uses: pre-commit/action@v3.0.1
 #        if: ${{ matrix.python-version != '3.6' }}
         with:
           extra_args: --all -c .pre-commit-config.yaml
  #     - name: 'pre-commit (custom Python ${{ matrix.python-version }})'
- #       uses: pre-commit/action@v3.0.0
+ #       uses: pre-commit/action@v3.0.1
  #       if: ${{ matrix.python-version == '3.6' }}
  #       with:
  #         extra_args: --all -c .pre-commit-config-gh-${{ matrix.python-version }}.yaml
@@ -60,7 +60,7 @@ jobs:
       - name: Print licences report
         if: ${{ always() }}
         run: echo "${{ steps.license_check_report.outputs.report }}"
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           retention-days: 2
           path: constraints-${{ matrix.python-version }}.txt
@@ -71,8 +71,8 @@ jobs:
     needs:
       - pre-commit
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/download-artifact@v3
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
         with:
           path: changes-dir
       - name: Move artifacts to their right place
@@ -81,7 +81,7 @@ jobs:
           rm -r changes-dir/artifact
       - name: Create Pull Request
         id: cpr
-        uses: peter-evans/create-pull-request@v4
+        uses: peter-evans/create-pull-request@v7
         with:
           title: Updated constraints (triggered by ${{ github.sha }})
           delete-branch: true

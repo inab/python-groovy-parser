@@ -31,7 +31,7 @@ repos:
 #        args: [--strict, --show-error-codes, --no-warn-unused-ignores, --python-executable, .pyWEenv/bin/python]
 #  - repo: meta
   - repo: https://github.com/jmfernandez/pre-commit_mirrors-actionlint.git
-    rev: v1.6.24
+    rev: v1.7.1
     hooks:
       - id: actionlint
 

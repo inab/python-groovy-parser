@@ -22,12 +22,12 @@ pip install git+https://github.com/inab/python-groovy-parser.git
 
 ## Test programs
 
-This repo contains a couple of test programs called
-[translated-groovy3-parser.py](translated-groovy3-parser.py) and
-[cached-translated-groovy3-parser.py](cached-translated-groovy3-parser.py),
+This repo contains three test programs called
+[translated-groovy3-parser.py](translated-groovy3-parser.py),
+[cached-translated-groovy3-parser.py](cached-translated-groovy3-parser.py) and [parser-groovy-writer.py](parser-groovy-writer.py),
 which demonstrate how to use the parser and digest it a bit.
 
-The programs take one or more files as input.
+All the programs take one or more files as input.
 
 ```bash
 git pull https://github.com/nf-core/rnaseq.git
@@ -42,8 +42,8 @@ Also, when the parsing task worked properly, it condenses and serializes
 the parse tree into a file with extension `.lark.json` (for instance,
 `rnaseq/modules/local/bedtools_genomecov.nf.lark.json`).
 
-And as a proof of concept, it tries to identify features from Nextflow files,
-like the declared processes, includes and workflows, and they are roughly printed
+The first two programs try, as a proof of concept, to identify features from Nextflow files,
+like the declared `process`, `include` and `workflow`, and they are roughly printed
 at a file with extension `.lark.result` (for instance `rnaseq/modules/local/bedtools_genomecov.nf.lark.result`).
 
 As parsing task is heavy, the parsing module also contains a method to
@@ -58,6 +58,13 @@ GROOVY_CACHEDIR=/tmp/somecachedir cached-translated-groovy3-parser.py $(find rna
 The caching directory contents depend on the grammar and the implementations, as well as versions of the dependencies.
 So, if this software is updated (due grammar is updated or a bug is fixed),
 cached contents from previous versions are not reused.
+
+The third program `parser-groovy-writer.py` was written thinking on a request from an 
+issue, where the issuer wanted to write back the parsed tree after some processing.
+So, this program writes in a new file with extension `.mirrored` what it survived the parsing.
+In the current implementation there are some elements, like comments and some combinations of
+whitespaces, which are not propagated from the tokenizer to the lexer and parser,
+so they are not reintegrated.
 
 # Acknowledgements
 
