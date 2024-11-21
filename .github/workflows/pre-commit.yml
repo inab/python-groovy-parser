@@ -80,8 +80,8 @@ jobs:
           path: changes-dir
       - name: Move artifacts to their right place
         run: |
-          cp -dpr changes-dir/artifact/* .
-          rm -r changes-dir/artifact
+          cp -dpr changes-dir/*/* .
+          rm -r changes-dir/*
       - name: Create Pull Request
         id: cpr
         uses: peter-evans/create-pull-request@v7
