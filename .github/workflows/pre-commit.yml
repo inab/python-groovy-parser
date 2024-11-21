@@ -62,6 +62,7 @@ jobs:
         run: echo "${{ steps.license_check_report.outputs.report }}"
       - uses: actions/upload-artifact@v4
         with:
+          name: constraints-artifacts-${{ matrix.python-version }}
           retention-days: 2
           path: constraints-${{ matrix.python-version }}.txt
 
@@ -74,6 +75,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
+          pattern: constraints-artifacts-*
+          merge-multiple: true
           path: changes-dir
       - name: Move artifacts to their right place
         run: |
