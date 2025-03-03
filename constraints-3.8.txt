@@ -1,2 +1,2 @@
 lark==1.2.2
-Pygments==2.18.0
+Pygments==2.19.1
