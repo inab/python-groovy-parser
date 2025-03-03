@@ -360,11 +360,16 @@ def analyze_nf_source(
     jsonfile: "str",
     resultfile: "str",
     cache_directory: "Optional[str]" = None,
+    ro_cache_directories: "Sequence[str]" = [],
 ) -> "Union[RuleNode, LeafNode, EmptyNode]":
     with open(filename, mode="r", encoding="utf-8") as wfH:
         content = wfH.read()
 
-    t_tree = parse_and_digest_groovy_content(content, cache_directory=cache_directory)
+    t_tree = parse_and_digest_groovy_content(
+        content,
+        cache_directory=cache_directory,
+        ro_cache_directories=ro_cache_directories,
+    )
 
     # These are for debugging purposes
     # logging.debug(tree.pretty())
@@ -409,6 +414,16 @@ if __name__ == "__main__":
         print(
             "[WARNING] No caching is done. If you want to cache parsed content declare variable GROOVY_CACHEDIR"
         )
+
+    ro_cache_directories = []
+    cache_directory_ro = os.environ.get("GROOVY_CACHEDIRS_RO")
+    if cache_directory_ro is not None:
+        print(f"* Using as read-only caching directories {cache_directory_ro}")
+        ro_cache_directories = cache_directory_ro.split(":")
+    else:
+        print(
+            "[WARNING] No read-only caching is used. If you want to use cached parsed contents declare variable GROOVY_CACHEDIRS_RO, separating more than one path by colons"
+        )
     for filename in sys.argv[1:]:
         print(f"* Parsing {filename}")
         logfile = filename + ".lark"
@@ -420,7 +435,11 @@ if __name__ == "__main__":
         log.addHandler(fH)  # set the new handler
         try:
             analyze_nf_source(
-                filename, jsonfile, resultfile, cache_directory=cache_directory
+                filename,
+                jsonfile,
+                resultfile,
+                cache_directory=cache_directory,
+                ro_cache_directories=ro_cache_directories,
             )
         except Exception as e:
             print(f"\tParse failed, see {logfile}")

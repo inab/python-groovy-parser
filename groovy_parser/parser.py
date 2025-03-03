@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (C) 2024 Barcelona Supercomputing Center, José M. Fernández
+# Copyright (C) 2025 Barcelona Supercomputing Center, José M. Fernández
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import hashlib
 import json
 import os
 import os.path
+import pathlib
 from typing import (
     cast,
     TYPE_CHECKING,
@@ -157,6 +158,7 @@ def create_groovy_parser() -> "Lark":
             #    parser='lalr',
             #    debug=True,
             start="compilation_unit",
+            # ambiguity='explicit',
             # lexer_callbacks={
             #    'square_bracket_block': jarlmethod
             # }
@@ -217,13 +219,21 @@ BLOCK_SIZE = 1024 * 1024
 
 def parse_and_digest_groovy_content(
     content: "str",
-    cache_directory: "Optional[str]" = None,
+    ro_cache_directories: "Optional[Sequence[Union[str, os.PathLike[str]]]]" = None,
+    cache_directory: "Optional[Union[str, os.PathLike[str]]]" = None,
     prune: "Sequence[str]" = ["sep", "nls"],
     noflat: "Sequence[str]" = ["script_statement"],
 ) -> "Union[RuleNode, LeafNode, EmptyNode]":
     t_tree: "Optional[Union[RuleNode, LeafNode, EmptyNode]]" = None
-    hashfile: "Optional[str]" = None
-    if cache_directory is not None and os.path.isdir(cache_directory):
+    hashpath: "Optional[pathlib.Path]" = None
+    cache_path: "Optional[pathlib.Path]" = None
+    if cache_directory is not None:
+        if isinstance(cache_directory, pathlib.Path):
+            cache_path = cache_directory
+        else:
+            cache_path = pathlib.Path(cache_directory)
+
+    if cache_path is not None and cache_path.is_dir():
         h = hashlib.sha256()
         buff = bytearray(BLOCK_SIZE)
 
@@ -246,22 +256,46 @@ def parse_and_digest_groovy_content(
         # Now we can obtain the relative directory, unique to this
         # version of the software and its dependencies
         hreldir = h.copy().hexdigest()
-        this_cache_directory = os.path.join(cache_directory, hreldir)
-        os.makedirs(this_cache_directory, exist_ok=True)
+
+        ro_cache_paths: "MutableSequence[pathlib.Path]" = []
+        if ro_cache_directories is not None:
+            for ro_cache_directory in ro_cache_directories:
+                if isinstance(ro_cache_directory, pathlib.Path):
+                    ro_cache_path = ro_cache_directory
+                else:
+                    ro_cache_path = pathlib.Path(ro_cache_directory)
+
+                # Include only existing cache paths
+                this_ro_cache_path = ro_cache_path / hreldir
+                if this_ro_cache_path.is_dir():
+                    ro_cache_paths.append(this_ro_cache_path)
+
+        this_cache_path = cache_path / hreldir
+        this_cache_path.mkdir(parents=True, exist_ok=True)
+
+        ro_cache_paths.append(this_cache_path)
 
         # Now, let's go for the content signature
         h.update(content.encode("utf-8"))
-        hashfile = os.path.join(this_cache_directory, h.hexdigest() + ".json.gz")
+        rel_hashpath = h.hexdigest() + ".json.gz"
 
-        if os.path.isfile(hashfile):
-            try:
-                with gzip.open(hashfile, mode="rt", encoding="utf-8") as jH:
-                    t_tree = json.load(jH)
-            except:
-                # If it is unreadable, re-create
-                pass
+        # This is needed in case nothing was available
+        hashpath = this_cache_path / rel_hashpath
+        for ro_cache_path in ro_cache_paths:
+            ro_hashpath = ro_cache_path / rel_hashpath
+            if ro_hashpath.is_file():
+                try:
+                    with gzip.open(
+                        ro_hashpath.as_posix(), mode="rt", encoding="utf-8"
+                    ) as jH:
+                        t_tree = json.load(jH)
+                    hashpath = None
+                    break
+                except:
+                    # If it is unreadable, re-create
+                    pass
 
-    if t_tree is None:
+    if t_tree is None and (hashpath is not None or cache_path is None):
         tree = parse_groovy_content(content)
         t_tree = LarkFilteringTreeEncoder().default(
             tree,
@@ -269,8 +303,10 @@ def parse_and_digest_groovy_content(
             noflat=noflat,
         )
 
-        if hashfile is not None:
-            with gzip.open(hashfile, mode="wt", encoding="utf-8") as jH:
-                json.dump(t_tree, jH, sort_keys=True)
+    assert t_tree is not None
+
+    if hashpath is not None:
+        with gzip.open(hashpath.as_posix(), mode="wt", encoding="utf-8") as jH:
+            json.dump(t_tree, jH, sort_keys=True)
 
     return t_tree
