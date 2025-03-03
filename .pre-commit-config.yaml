@@ -1,6 +1,19 @@
 fail_fast: true
 
 repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      # This one has been added to fail fast on syntax errors
+      # before running expensive pylint
+      - id: check-ast
+        types_or:
+          - python
+          - pyi
+        exclude: "/(site-packages|development-[^/]*|docs|node_modules|__pycache__|\\..*)/$"
+      - id: check-yaml
+        types: [file]
+        files: \.(yaml|yml)$
   - repo: local
     hooks:
       - id: pylint
@@ -10,7 +23,8 @@ repos:
         types:
           - python
         exclude: "^[^/]*env/|dev-[^/]*/"
-        entry: pylint -j 0
+        entry: pylint
+        args: [-j , "4", --source-roots, .]
       - id: mypy
         name: Local MyPy
         language: system
@@ -20,7 +34,8 @@ repos:
         exclude: "^[^/]*env/|dev-[^/]*/"
         require_serial: true
 #        entry: ./basic-installer.bash mypy --strict
-        entry: mypy --strict --show-error-codes --no-warn-unused-ignores
+        entry: mypy
+        args: [--strict, --show-error-codes, --no-warn-unused-ignores]
 # Main problem: python executable path, used to find the environment is hard
 #  - repo: https://github.com/pre-commit/mirrors-mypy.git
 #    rev: v1.2.0
@@ -39,5 +54,9 @@ repos:
     rev: 23.3.0
     hooks:
       - id: black
-        exclude: "^[^/]*env/|dev-[^/]*/"
+        name: black_apply
+        exclude: "^[^/]*env/|development-[^/]*/|docs/"
+        stages: [manual]
+      - id: black
+        exclude: "^[^/]*env/|development-[^/]*/|docs/"
         args: [--diff, --check]
