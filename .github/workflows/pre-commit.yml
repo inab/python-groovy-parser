@@ -200,6 +200,7 @@ jobs:
         if: steps.move.outputs.skip == 'false'
         with:
           title: Updated constraints (triggered by ${{ github.sha }})
+          add-paths: constraints-*.txt
           delete-branch: true
           commit-message: "[create-pull-request] Automatically commit updated contents (constraints)"
       - name: Check outputs

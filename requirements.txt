@@ -1,2 +1,3 @@
 lark
+lark < 1.2.0 ; python_version < '3.8'
 Pygments
