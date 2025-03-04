@@ -25,6 +25,7 @@ import json
 import os
 import os.path
 import pathlib
+import shutil
 from typing import (
     cast,
     TYPE_CHECKING,
@@ -257,7 +258,13 @@ def parse_and_digest_groovy_content(
         # version of the software and its dependencies
         hreldir = h.copy().hexdigest()
 
-        ro_cache_paths: "MutableSequence[pathlib.Path]" = []
+        this_cache_path = cache_path / hreldir
+        this_cache_path.mkdir(parents=True, exist_ok=True)
+
+        # The first path to be inspected must the read-write one
+        # so no spurious backpropagation operations from read-only to
+        # already existing read-write one happen
+        ro_cache_paths: "MutableSequence[pathlib.Path]" = [this_cache_path]
         if ro_cache_directories is not None:
             for ro_cache_directory in ro_cache_directories:
                 if isinstance(ro_cache_directory, pathlib.Path):
@@ -269,11 +276,6 @@ def parse_and_digest_groovy_content(
                 this_ro_cache_path = ro_cache_path / hreldir
                 if this_ro_cache_path.is_dir():
                     ro_cache_paths.append(this_ro_cache_path)
-
-        this_cache_path = cache_path / hreldir
-        this_cache_path.mkdir(parents=True, exist_ok=True)
-
-        ro_cache_paths.append(this_cache_path)
 
         # Now, let's go for the content signature
         h.update(content.encode("utf-8"))
@@ -289,7 +291,25 @@ def parse_and_digest_groovy_content(
                         ro_hashpath.as_posix(), mode="rt", encoding="utf-8"
                     ) as jH:
                         t_tree = json.load(jH)
-                    hashpath = None
+
+                    # This is needed in order to propagate the cached
+                    # copy from the read-only cache
+                    try:
+                        assert hashpath is not None
+                        if not hashpath.samefile(ro_hashpath):
+                            # Removing possible stale copy
+                            if hashpath.exists():
+                                if hashpath.is_dir() and not hashpath.is_symlink():
+                                    shutil.rmtree(hashpath.as_posix())
+                                else:
+                                    hashpath.unlink()
+                            # New copy
+                            shutil.copy2(ro_hashpath.as_posix(), hashpath.as_posix())
+                        hashpath = None
+                    except:
+                        # If it cannot be created for some reason, try again later
+                        pass
+
                     break
                 except:
                     # If it is unreadable, re-create
