@@ -15,10 +15,10 @@ jobs:
         python-version: [ "3.8", "3.9", "3.10", "3.11", "3.12", "3.13" ]
     name: Pre-commit python ${{ matrix.python-version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 100
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         id: cachepy
         with:
           python-version: ${{ matrix.python-version }}
@@ -28,32 +28,35 @@ jobs:
             mypy-requirements.txt
             dev-requirements.txt
           architecture: x64
-      - name: Changed requirements.txt
-        id: changed-requirements-txt
-        uses: tj-actions/changed-files@v44
-        with:
-          files: requirements.txt
-
-      - name: 'Install requirements (standard)'
+      - name: 'Install requirements (standard or constraints ${{ matrix.python-version }})'
         run: |
           pip install --upgrade pip wheel
-          pip install -r requirements.txt
-      - name: 'Install requirements (standard with freeze) or constraints (Python ${{ matrix.python-version }})'
-        run: |
-          pip install --upgrade pip wheel
-          if [ ${{ steps.changed-requirements-txt.outputs.any_changed }} != 'true' ] && [ -f constraints-${{ matrix.python-version }}.txt ] ; then
-            pip install -r requirements.txt -c constraints-${{ matrix.python-version }}.txt
+          constraints_file="constraints-${{ matrix.python-version }}.txt"
+          regen_constraints=
+          if [ -f "$constraints_file" ] ; then
+            at="$(git --no-pager log -p -1 "--format=tformat:%at" --no-patch -- "$constraints_file")"
+            dat="$(git --no-pager log -p -1 "--format=tformat:%at" --no-patch -- "requirements.txt")"
+            if [ "$at" -lt "$dat" ] ; then
+              regen_constraints=true
+            fi
           else
-            pip install -r requirements.txt
-            pip freeze > constraints-${{ matrix.python-version }}.txt
+            regen_constraints=true
           fi
-      - name: 'Install dev requirements'
+          if [ -n "$regen_constraints" ] ; then
+            pip install -r requirements.txt
+            pip freeze > "$constraints_file"
+            grep -vF git+ "$constraints_file" > "$constraints_file"-relaxed
+          else
+            grep -vF git+ "$constraints_file" > "$constraints_file"-relaxed
+            pip install -r requirements.txt -c "$constraints_file"-relaxed
+          fi
+      - name: 'Install development requirements'
         run: |
-          pip install -r dev-requirements.txt -r mypy-requirements.txt -c constraints-${{ matrix.python-version }}.txt
+          pip install -r dev-requirements.txt -r mypy-requirements.txt -c constraints-${{ matrix.python-version }}.txt-relaxed
       - name: MyPy cache
         uses: actions/cache@v4
         with:
-          path: .mypy_cache/${{ matrix.python-version }}
+          path: '.mypy_cache/[0-9]*'
           key: mypy-${{ matrix.python-version }}
       - name: 'pre-commit'
         uses: pre-commit/action@v3.0.1
@@ -65,18 +68,25 @@ jobs:
  #       if: ${{ matrix.python-version == '3.6' }}
  #       with:
  #         extra_args: --all -c .pre-commit-config-gh-${{ matrix.python-version }}.yaml
+      - name: Get transitive dependencies licences
+        id: license_check_print_report
+#        uses: pilosus/action-pip-license-checker@v1.0.0
+#        continue-on-error: true
+        uses: pilosus/action-pip-license-checker@v3.1.0
+        with:
+          requirements: constraints-${{ matrix.python-version }}.txt
       - name: Check transitive dependencies licences
         id: license_check_report
 #        uses: pilosus/action-pip-license-checker@v1.0.0
 #        continue-on-error: true
-        uses: pilosus/action-pip-license-checker@v2.0.0
+        uses: pilosus/action-pip-license-checker@v3.1.0
         with:
           requirements: constraints-${{ matrix.python-version }}.txt
           fail: 'StrongCopyleft'
           exclude: 'pylint.*'
       - name: Print licences report
         if: ${{ always() }}
-        run: echo "${{ steps.license_check_report.outputs.report }}"
+        run: echo "${{ steps.license_check_print_report.outputs.report }}"
       - uses: actions/upload-artifact@v4
         with:
           name: constraints-artifacts-${{ matrix.python-version }}
@@ -90,10 +100,10 @@ jobs:
         python-version: [ "3.7" ]
     name: Pre-commit python ${{ matrix.python-version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 100
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         id: cachepy
         with:
           python-version: ${{ matrix.python-version }}
@@ -103,32 +113,34 @@ jobs:
             mypy-requirements.txt
             dev-requirements.txt
           architecture: x64
-      - name: Changed requirements.txt
-        id: changed-requirements-txt
-        uses: tj-actions/changed-files@v44
-        with:
-          files: requirements.txt
-
-      - name: 'Install requirements (standard)'
+      - name: 'Install requirements (standard or constraints ${{ matrix.python-version }})'
         run: |
           pip install --upgrade pip wheel
-          pip install -r requirements.txt
-      - name: 'Install requirements (standard with freeze) or constraints (Python ${{ matrix.python-version }})'
-        run: |
-          pip install --upgrade pip wheel
-          if [ ${{ steps.changed-requirements-txt.outputs.any_changed }} != 'true' ] && [ -f constraints-${{ matrix.python-version }}.txt ] ; then
-            pip install -r requirements.txt -c constraints-${{ matrix.python-version }}.txt
+          constraints_file="constraints-${{ matrix.python-version }}.txt"
+          regen_constraints=
+          if [ -f "$constraints_file" ] ; then
+            at="$(git --no-pager log -p -1 "--format=tformat:%at" --no-patch -- "$constraints_file")"
+            dat="$(git --no-pager log -p -1 "--format=tformat:%at" --no-patch -- "requirements.txt")"
+            if [ "$at" -lt "$dat" ] ; then
+              regen_constraints=true
+            fi
           else
-            pip install -r requirements.txt
-            pip freeze > constraints-${{ matrix.python-version }}.txt
+            regen_constraints=true
           fi
-      - name: 'Install dev requirements'
-        run: |
-          pip install -r dev-requirements.txt -r mypy-requirements.txt -c constraints-${{ matrix.python-version }}.txt
+          if [ -n "$regen_constraints" ] ; then
+            pip install -r requirements.txt
+            pip freeze > "$constraints_file"
+            grep -vF git+ "$constraints_file" > "$constraints_file"-relaxed
+          else
+            grep -vF git+ "$constraints_file" > "$constraints_file"-relaxed
+            pip install -r requirements.txt -c "$constraints_file"-relaxed
+          fi
+      - run: |
+          pip install -r dev-requirements.txt -r mypy-requirements.txt -c constraints-${{ matrix.python-version }}.txt-relaxed
       - name: MyPy cache
         uses: actions/cache@v4
         with:
-          path: .mypy_cache/${{ matrix.python-version }}
+          path: '.mypy_cache/[0-9]*'
           key: mypy-${{ matrix.python-version }}
       - name: 'pre-commit'
         uses: pre-commit/action@v3.0.1
@@ -140,18 +152,25 @@ jobs:
  #       if: ${{ matrix.python-version == '3.6' }}
  #       with:
  #         extra_args: --all -c .pre-commit-config-gh-${{ matrix.python-version }}.yaml
+      - name: Get transitive dependencies licences
+        id: license_check_print_report
+#        uses: pilosus/action-pip-license-checker@v1.0.0
+#        continue-on-error: true
+        uses: pilosus/action-pip-license-checker@v3.1.0
+        with:
+          requirements: constraints-${{ matrix.python-version }}.txt
       - name: Check transitive dependencies licences
         id: license_check_report
 #        uses: pilosus/action-pip-license-checker@v1.0.0
 #        continue-on-error: true
-        uses: pilosus/action-pip-license-checker@v2.0.0
+        uses: pilosus/action-pip-license-checker@v3.1.0
         with:
           requirements: constraints-${{ matrix.python-version }}.txt
           fail: 'StrongCopyleft'
-          exclude: 'pylint.*'
+          exclude: '(?i)^(pylint|dulwich).*'
       - name: Print licences report
         if: ${{ always() }}
-        run: echo "${{ steps.license_check_report.outputs.report }}"
+        run: echo "${{ steps.license_check_print_report.outputs.report }}"
       - uses: actions/upload-artifact@v4
         with:
           name: constraints-artifacts-${{ matrix.python-version }}
@@ -169,8 +188,8 @@ jobs:
       - name: Get analysis timestamp
         id: timestamp
         run: echo "timestamp=$(date -Is)" >> "$GITHUB_OUTPUT"
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v5
         id: download
         with:
           pattern: constraints-artifacts-*
@@ -199,7 +218,7 @@ jobs:
         uses: peter-evans/create-pull-request@v7
         if: steps.move.outputs.skip == 'false'
         with:
-          title: Updated constraints (triggered by ${{ github.sha }})
+          title: Updated constraints (triggered on ${{ steps.timestamp.outputs.timestamp }} by ${{ github.sha }})
           add-paths: constraints-*.txt
           delete-branch: true
           commit-message: "[create-pull-request] Automatically commit updated contents (constraints)"
