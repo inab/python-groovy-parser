@@ -15,7 +15,7 @@ jobs:
         python-version: [ "3.8", "3.9", "3.10", "3.11", "3.12", "3.13" ]
     name: Pre-commit python ${{ matrix.python-version }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 100
       - uses: actions/setup-python@v6
@@ -87,7 +87,7 @@ jobs:
       - name: Print licences report
         if: ${{ always() }}
         run: echo "${{ steps.license_check_print_report.outputs.report }}"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: constraints-artifacts-${{ matrix.python-version }}
           retention-days: 2
@@ -100,7 +100,7 @@ jobs:
         python-version: [ "3.7" ]
     name: Pre-commit python ${{ matrix.python-version }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 100
       - uses: actions/setup-python@v6
@@ -171,7 +171,7 @@ jobs:
       - name: Print licences report
         if: ${{ always() }}
         run: echo "${{ steps.license_check_print_report.outputs.report }}"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: constraints-artifacts-${{ matrix.python-version }}
           retention-days: 2
@@ -188,8 +188,8 @@ jobs:
       - name: Get analysis timestamp
         id: timestamp
         run: echo "timestamp=$(date -Is)" >> "$GITHUB_OUTPUT"
-      - uses: actions/checkout@v5
-      - uses: actions/download-artifact@v5
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v6
         id: download
         with:
           pattern: constraints-artifacts-*
