@@ -64,7 +64,7 @@ jobs:
             fi
             cat audit-report-${{ matrix.python-version }}.md >> "$GITHUB_STEP_SUMMARY"
           fi
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         with:
           name: audit-${{ matrix.python-version }}
           retention-days: 2
@@ -84,7 +84,7 @@ jobs:
         id: timestamp
         run: echo "timestamp=$(date -Is)" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v6
-      - uses: actions/download-artifact@v6
+      - uses: actions/download-artifact@v7
         id: download
         with:
           pattern: audit-*
@@ -122,7 +122,7 @@ jobs:
           echo "skip=$skip" >> "$GITHUB_OUTPUT"
       - name: Create Pull Request
         id: cpr
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@v8
         if: steps.move.outputs.skip == 'false'
         with:
           title: Updated constraints due security reasons (triggered on ${{ steps.timestamp.outputs.timestamp }} by ${{ github.sha }})
