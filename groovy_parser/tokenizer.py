@@ -243,4 +243,4 @@ class GroovyRestrictedTokenizer(RegexLexer):
 
     @staticmethod
     def analyse_text(text: "str") -> "bool":
-        return cast("bool", shebang_matches(text, r"groovy"))  # type: ignore[no-untyped-call]
+        return cast("bool", shebang_matches(text, r"groovy"))  # type: ignore[no-untyped-call, redundant-cast]
