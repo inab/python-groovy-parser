@@ -54,7 +54,7 @@ jobs:
         run: |
           pip install -r dev-requirements.txt -r mypy-requirements.txt -c constraints-${{ matrix.python-version }}.txt-relaxed
       - name: MyPy cache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: '.mypy_cache/[0-9]*'
           key: mypy-${{ matrix.python-version }}
@@ -138,7 +138,7 @@ jobs:
       - run: |
           pip install -r dev-requirements.txt -r mypy-requirements.txt -c constraints-${{ matrix.python-version }}.txt-relaxed
       - name: MyPy cache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: '.mypy_cache/[0-9]*'
           key: mypy-${{ matrix.python-version }}
