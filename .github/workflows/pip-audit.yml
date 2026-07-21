@@ -150,7 +150,7 @@ jobs:
 
   pull_request_changes:
     # Do this only when it is not a pull request validation
-    if: github.event_name != 'pull_request'
+    if: ${{ github.event_name != 'pull_request'}}
     runs-on: ubuntu-latest
     name: Pull request with the newly generated contents
     needs:

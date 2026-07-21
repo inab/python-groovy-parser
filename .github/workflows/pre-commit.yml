@@ -181,6 +181,7 @@ jobs:
   pull_request_changes:
     runs-on: ubuntu-latest
     name: Pull request with the newly generated contents
+    if: ${{ github.event_name != 'pull_request'}}
     needs:
       - pre-commit
       - pre-commit-22_04
